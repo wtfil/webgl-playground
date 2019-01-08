@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "http-server public -p 8090"
+  },
+  "devDependencies": {
+    "http-server": "^0.11.1"
+  }
+}
