@@ -56,13 +56,14 @@ export type Program = WebGLProgram & {
 }
 async function createProgram(gl: WebGLRenderingContext): Promise<Program | null> {
 
-    const webglProgram = gl.createProgram();
     const uPMatrix = Mat4.create();
     const uMVMatrix = Mat4.create();
     const vertexShader = await loadShader('vertex.glsl', gl, gl.VERTEX_SHADER);
     const fragmentShader = await loadShader('fragment.glsl', gl, gl.FRAGMENT_SHADER);
+    const webglProgram = gl.createProgram();
 
     if (!webglProgram || !vertexShader || !fragmentShader) {
+        console.warn('Failed to create shader program');
         return null;
     }
 
@@ -96,10 +97,10 @@ async function createProgram(gl: WebGLRenderingContext): Promise<Program | null>
 function createBuffer(gl: WebGLRenderingContext) {
     const buffer = gl.createBuffer();
     const positions = [
-        -1.0, 1.0,
-        1.0, 1.0,
+         1.0,  1.0,
+        -1.0,  1.0,
+         1.0, -1.0,
         -1.0, -1.0,
-        1.0, -1.0,
     ];
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(
@@ -115,7 +116,6 @@ function drawScene(program: Program, buffer: WebGLBuffer) {
     const width = gl.canvas.clientWidth;
     const height = gl.canvas.clientHeight;
     
-    //gl.viewport(0, 0, width, height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -123,7 +123,8 @@ function drawScene(program: Program, buffer: WebGLBuffer) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const fovy = 45 * Math.PI / 180;
-    Mat4.perspective(uPMatrix, fovy, width / height, 0.1, 100.0);
+    const ratio = width / height;
+    Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 100.0);
     Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
