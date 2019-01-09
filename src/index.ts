@@ -18,7 +18,14 @@ async function setup() {
         return;
     }
 
-    drawScene(program, buffers);
+    const start = Date.now();
+    function render() {
+        drawScene(program!, buffers, Date.now() - start);
+        requestAnimationFrame(render);
+    }
+
+    render();
+
 }
 
 async function loadShader(url: string, gl: WebGLRenderingContext, type: number) {
@@ -49,16 +56,10 @@ export type Program = WebGLProgram & {
         aVertexPosition: number;
         aVertexColor: number;
     },
-    matrix: {
-        uPMatrix: Mat4,
-        uMVMatrix: Mat4
-    },
     gl: WebGLRenderingContext;
 }
 async function createProgram(gl: WebGLRenderingContext): Promise<Program | null> {
 
-    const uPMatrix = Mat4.create();
-    const uMVMatrix = Mat4.create();
     const vertexShader = await loadShader('vertex.glsl', gl, gl.VERTEX_SHADER);
     const fragmentShader = await loadShader('fragment.glsl', gl, gl.FRAGMENT_SHADER);
     const webglProgram = gl.createProgram();
@@ -90,7 +91,6 @@ async function createProgram(gl: WebGLRenderingContext): Promise<Program | null>
         aVertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
         aVertexColor: gl.getAttribLocation(program, 'aVertexColor')
     };
-    program.matrix = {uPMatrix, uMVMatrix}
     program.gl = gl;
 
     return program;
@@ -139,10 +139,12 @@ function sendBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
     gl.enableVertexAttribArray(attribute);
 }
 
-function drawScene(program: Program, buffers: {[key: string]: WebGLBuffer}) {
-    const {gl, matrix: {uPMatrix, uMVMatrix}} = program;
+function drawScene(program: Program, buffers: {[key: string]: WebGLBuffer}, dt: number) {
+    const {gl} = program;
     const width = gl.canvas.clientWidth;
     const height = gl.canvas.clientHeight;
+    const uPMatrix = Mat4.create();
+    const uMVMatrix = Mat4.create();
     
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
@@ -152,8 +154,10 @@ function drawScene(program: Program, buffers: {[key: string]: WebGLBuffer}) {
 
     const fovy = 45 * Math.PI / 180;
     const ratio = width / height;
+    const rotation = dt / 10 / 180;
     Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 100.0);
     Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
+    Mat4.rotate(uMVMatrix, uMVMatrix, rotation, [0, 0, 1])
 
     sendBuffer(gl, buffers.position, program.attributes.aVertexPosition, 2);
     sendBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
