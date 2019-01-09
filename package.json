@@ -1,8 +1,17 @@
 {
   "scripts": {
-    "start": "http-server public -p 8090"
+    "start": "webpack-dev-server"
   },
   "devDependencies": {
-    "http-server": "^0.11.1"
+    "html-webpack-plugin": "^3.2.0",
+    "ts-loader": "^5.3.3",
+    "webpack": "^4.28.1",
+    "webpack-cli": "^3.2.1",
+    "webpack-dev-server": "^3.1.14"
+  },
+  "dependencies": {
+    "@types/gl-matrix": "^2.4.4",
+    "gl-matrix": "^3.0.0",
+    "typescript": "^3.2.2"
   }
 }
