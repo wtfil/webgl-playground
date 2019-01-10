@@ -7,16 +7,23 @@ module.exports = {
     entry: {
         index: './src/index.ts'
     },
+    output: {
+        path: path.resolve(__dirname, 'dist')
+    },
     module: {
         rules: [
             {
                 test: /\.ts$/,
                 loader: 'ts-loader',
+            },
+            {
+                test: /\.glsl$/,
+                loader: 'raw-loader',
             }
         ]
     },
     resolve: {
-        extensions: ['.ts', '.js']
+        extensions: ['.ts', '.js', '.glsl']
     },
     plugins: [
         new HtmlWebpackPlugin()

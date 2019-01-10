@@ -1,8 +1,10 @@
 import {mat4 as Mat4} from 'gl-matrix';
+import vertextShaderSource from './shaders/vertex.glsl';
+import fragmentShaderSource from './shaders/fragment.glsl';
 
 window.addEventListener('load', setup);
 
-async function setup() {
+function setup() {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -12,7 +14,7 @@ async function setup() {
     }
     document.body.appendChild(canvas);
 
-    const program = await createProgram(gl);
+    const program = createProgram(gl);
     const buffers = createBuffers(gl);
     if (!buffers || !program) {
         return;
@@ -28,9 +30,7 @@ async function setup() {
 
 }
 
-async function loadShader(url: string, gl: WebGLRenderingContext, type: number) {
-    const res = await fetch('/shaders/' + url);
-    const source = await res.text();
+function createShader(source: string, gl: WebGLRenderingContext, type: number) {
     const shader = gl.createShader(type);
     if (!shader) {
         return null;
@@ -58,10 +58,10 @@ export type Program = WebGLProgram & {
     },
     gl: WebGLRenderingContext;
 }
-async function createProgram(gl: WebGLRenderingContext): Promise<Program | null> {
+function createProgram(gl: WebGLRenderingContext): Program | null {
 
-    const vertexShader = await loadShader('vertex.glsl', gl, gl.VERTEX_SHADER);
-    const fragmentShader = await loadShader('fragment.glsl', gl, gl.FRAGMENT_SHADER);
+    const vertexShader = createShader(vertextShaderSource, gl, gl.VERTEX_SHADER);
+    const fragmentShader = createShader(fragmentShaderSource, gl, gl.FRAGMENT_SHADER);
     const webglProgram = gl.createProgram();
 
     if (!webglProgram || !vertexShader || !fragmentShader) {
@@ -153,7 +153,7 @@ function createBuffers(gl: WebGLRenderingContext) {
         16, 17, 18, 16, 18, 19,   // right
         20, 21, 22, 20, 22, 23,   // left
     ];
-    
+
     return {
         position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(positions)),
         color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(colors)),
