@@ -51,10 +51,12 @@ export type Program = WebGLProgram & {
     uniforms: {
         uMVMatrix: WebGLUniformLocation;
         uPMatrix: WebGLUniformLocation;
+        uNMatrix: WebGLUniformLocation;
     },
     attributes: {
         aVertexPosition: number;
         aVertexColor: number;
+        aVertexNormal: number;
     },
     gl: WebGLRenderingContext;
 }
@@ -85,11 +87,13 @@ function createProgram(gl: WebGLRenderingContext): Program | null {
 
     program.uniforms = {
         uMVMatrix: getUniform('uMVMatrix'),
-        uPMatrix: getUniform('uPMatrix')
+        uPMatrix: getUniform('uPMatrix'),
+        uNMatrix: getUniform('uNMatrix')
     };
     program.attributes = {
         aVertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
-        aVertexColor: gl.getAttribLocation(program, 'aVertexColor')
+        aVertexColor: gl.getAttribLocation(program, 'aVertexColor'),
+        aVertexNormal: gl.getAttribLocation(program, 'aVertexNormal')
     };
     program.gl = gl;
 
@@ -145,6 +149,44 @@ function createBuffers(gl: WebGLRenderingContext) {
         colors = colors.concat(c, c, c, c);
     }
 
+    const vertexNormals = [
+        // Front
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+
+        // Back
+        0.0, 0.0, -1.0,
+        0.0, 0.0, -1.0,
+        0.0, 0.0, -1.0,
+        0.0, 0.0, -1.0,
+
+        // Top
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+
+        // Bottom
+        0.0, -1.0, 0.0,
+        0.0, -1.0, 0.0,
+        0.0, -1.0, 0.0,
+        0.0, -1.0, 0.0,
+
+        // Right
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+
+        // Left
+        -1.0, 0.0, 0.0,
+        -1.0, 0.0, 0.0,
+        -1.0, 0.0, 0.0,
+        -1.0, 0.0, 0.0
+    ];
+
     const indices = [
         0, 1, 2, 0, 2, 3,    // front
         4, 5, 6, 4, 6, 7,    // back
@@ -157,7 +199,8 @@ function createBuffers(gl: WebGLRenderingContext) {
     return {
         position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(positions)),
         color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(colors)),
-        indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices))
+        indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices)),
+        normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(vertexNormals))
     }
 }
 
@@ -189,8 +232,10 @@ function drawScene(program: Program, buffers: {[key: string]: WebGLBuffer}, dt: 
     const {gl} = program;
     const width = gl.canvas.clientWidth;
     const height = gl.canvas.clientHeight;
+
     const uPMatrix = Mat4.create();
     const uMVMatrix = Mat4.create();
+    const uNMatrix = Mat4.create();
     
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
@@ -205,12 +250,21 @@ function drawScene(program: Program, buffers: {[key: string]: WebGLBuffer}, dt: 
     Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
     Mat4.rotate(uMVMatrix, uMVMatrix, rotation, [0, 1, 1])
 
+    Mat4.invert(uNMatrix, uMVMatrix);
+    Mat4.transpose(uNMatrix, uNMatrix);
+
     sendBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
     sendBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
+    sendBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
     gl.useProgram(program);
+    gl.uniformMatrix4fv(
+        program.uniforms.uNMatrix,
+        false,
+        uNMatrix
+    );
     gl.uniformMatrix4fv(
         program.uniforms.uPMatrix,
         false,
