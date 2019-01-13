@@ -22,6 +22,7 @@ void main() {
   // position
   gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
 
+
   // color
   vColor = aVertexColor;
 }
