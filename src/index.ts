@@ -1,6 +1,7 @@
-import {mat4 as Mat4, vec3 as Vec3, quat as Quat} from 'gl-matrix';
+import {mat4 as Mat4} from 'gl-matrix';
 import vertextShaderSource from './shaders/vertex.glsl';
 import fragmentShaderSource from './shaders/fragment.glsl';
+import './create-terrain';
 
 window.addEventListener('load', setup);
 
@@ -308,8 +309,6 @@ function drawScene(
     const uPMatrix = Mat4.create();
     const uMVMatrix = Mat4.create();
     const uNMatrix = Mat4.create();
-
-    gl.uniformMatrix4fv(program.uniforms.uRotation, false, properties.rotation);
 
     function drawCube() {
         sendBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
