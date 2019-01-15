@@ -1,3 +1,5 @@
+import {vec3 as Vec3} from "gl-matrix";
+
 export async function createTerrain(src: string, levels: number, size: number) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
@@ -17,6 +19,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     const heatmap = new Float32Array(width * height);
     let max = 0;
 
+    console.time('heatmap')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j ++) {
             let s = 0;
@@ -32,30 +35,28 @@ export async function createTerrain(src: string, levels: number, size: number) {
             }
         }
     }
-
-    // const width = 2;
-    // const height = 2;
-    // const heatmap = [0, 1, 0, 1];
+    console.timeEnd('heatmap')
 
     const position = [];
     const indices = [];
     const colors = [];
+    const normals = [];
 
+    console.time('indicies')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
-            //position.push(i, heatmap[k], j)
-            position.push(i, j, heatmap[k]);
             const c = (1 + heatmap[k]) / (1 + max);
-            //const c = 1;
+            position.push(i, j, heatmap[k]);
             colors.push(c, c, c, 1)
+
+            //normals.push(1, 1, 1);
 
             if ((i !== height - 1) && (j !== width - 1)) {
                 indices.push(
                     k,
                     k + 1,
                     k + width,
-                    k, // why the hell we need this?
                     k + 1,
                     k + width + 1,
                     k + width,
@@ -64,17 +65,41 @@ export async function createTerrain(src: string, levels: number, size: number) {
             
         }
     }
+    console.timeEnd('indicies')
 
-    print(heatmap, width);
-    // print(position, width);
-    console.log({width, height})
-    console.log(position)
-    console.log(indices)
+    console.time('normals')
+    for (let i = 0; i < indices.length / 3; i ++) {
+        const i1 = indices[i * 3];
+        const i2 = indices[i * 3 + 1];
+        const i3 = indices[i * 3 + 2];
+        const p1 = Vec3.fromValues(
+            position[i1],
+            position[i1 + 1],
+            position[i1 + 2]
+        );
+        const p2 = Vec3.fromValues(
+            position[i2],
+            position[i2 + 1],
+            position[i2 + 2]
+        );
+        const p3 = Vec3.fromValues(
+            position[i3],
+            position[i3 + 1],
+            position[i3 + 2]
+        );
+        Vec3.subtract(p2, p2, p1)
+        Vec3.subtract(p3, p3, p1)
+        Vec3.cross(p2, p2, p3)
+        Vec3.normalize(p2, p2);
+        normals.push(p2[0], p2[1], p2[2]);
+    }
+    console.timeEnd('normals')
 
     return {
         position: new Float32Array(position),
         indices: new Uint16Array(indices),
-        colors: new Float32Array(colors)
+        colors: new Float32Array(colors),
+        normals: new Float32Array(normals)
     }
 }
 
@@ -95,6 +120,3 @@ function print(arr: any, width: number) {
     }
     console.log('%c%s', 'font-size: 8px;', lines.join('\n'));
 }
-
-
-//createTerrain('/heatmap2.jpg', 8, 64);

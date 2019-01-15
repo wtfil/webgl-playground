@@ -24,13 +24,14 @@ async function setup() {
 
     const properties = {
         rotation: Mat4.create(),
-        translate: Vec3.fromValues(-5, -5, -20)
+        translate: Vec3.fromValues(-5, -5, -20),
+        directionalLightVector: Vec3.fromValues(0.85, 0.8, 0.75)
     };
 
     const eventTarget = initControls(canvas);
     eventTarget.addEventListener('change', e => {
-        const {detail: {rx, ry, rz, dx, dy, dz}} = e as CustomEvent;
-        const {rotation, translate} = properties;
+        const {detail: {rx, ry, rz, dx, dy, dz, dl}} = e as CustomEvent;
+        const {rotation, translate, directionalLightVector} = properties;
         if (rx) {
             Mat4.rotate(rotation, rotation, rx, [1, 0, 0]);
         }
@@ -39,6 +40,9 @@ async function setup() {
         }
         if (rz) {
             Mat4.rotate(rotation, rotation, rz, [0, 0, 1]);
+        }
+        if (dl) {
+            Vec3.rotateZ(directionalLightVector, directionalLightVector, [1, 0, 0], 10 * dl);
         }
         Vec3.add(translate, translate, [dx, dy, dz])
     })
@@ -60,7 +64,7 @@ async function initTerrain(gl: WebGLRenderingContext) {
         position: createBuffer(gl, gl.ARRAY_BUFFER, terrain.position),
         color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(terrain.colors)),
         indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, terrain.indices),
-        // normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(vertexNormals))
+        normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(terrain.normals)),
         size: terrain.indices.length
     }
 }
@@ -82,6 +86,7 @@ function initControls(canvas: HTMLElement) {
         let rx = 0;
         let ry = 0;
         let rz = 0;
+        let dl = 0;
 
         if (pressed.w) {
             dz = s1;
@@ -111,9 +116,14 @@ function initControls(canvas: HTMLElement) {
         } else if (pressed.l) {
             ry = -s2;
         }
+        if (pressed['[']) {
+            dl = s;
+        } else if (pressed[']']) {
+            dl = -s;
+        }
 
-        if (dx || dy || dz || rx || ry || rz) {
-            onChange({dx, dy, dz, rx, ry, rz})
+        if (dx || dy || dz || rx || ry || rz || dl) {
+            onChange({dx, dy, dz, rx, ry, rz, dl})
         }
         requestAnimationFrame(pullKeys);
     }
@@ -166,6 +176,7 @@ export type Program = WebGLProgram & {
         uMVMatrix: WebGLUniformLocation;
         uPMatrix: WebGLUniformLocation;
         uNMatrix: WebGLUniformLocation;
+        uDirectionalLightVector: WebGLUniformLocation;
     },
     attributes: {
         aVertexPosition: number;
@@ -207,6 +218,7 @@ function createProgram(
         uMVMatrix: getUniform('uMVMatrix'),
         uPMatrix: getUniform('uPMatrix'),
         uNMatrix: getUniform('uNMatrix'),
+        uDirectionalLightVector: getUniform('uDirectionalLightVector')
     };
     program.attributes = {
         aVertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
@@ -333,7 +345,7 @@ function createBuffer(gl: WebGLRenderingContext, type: number, data: Float32Arra
     return buffer as WebGLBuffer;
 }
 
-function sendBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: number, numComponents: number) {
+function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: number, numComponents: number) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.vertexAttribPointer(
         attribute,
@@ -351,7 +363,8 @@ function drawScene(
     buffers: {[key: string]: WebGLBuffer | number},
     properties: {
         rotation: Mat4,
-        translate: Vec3
+        translate: Vec3,
+        directionalLightVector: Vec3
     }
 ) {
     const {gl} = program;
@@ -361,33 +374,6 @@ function drawScene(
     const uPMatrix = Mat4.create();
     const uMVMatrix = Mat4.create();
     const uNMatrix = Mat4.create();
-
-    function drawBuffer() {
-        sendBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
-        sendBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
-        //sendBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-        gl.useProgram(program);
-        gl.uniformMatrix4fv(
-            program.uniforms.uNMatrix,
-            false,
-            uNMatrix
-        );
-        gl.uniformMatrix4fv(
-            program.uniforms.uPMatrix,
-            false,
-            uPMatrix
-        );
-        gl.uniformMatrix4fv(
-            program.uniforms.uMVMatrix,
-            false,
-            uMVMatrix
-        );
-
-        //gl.drawElements(gl.TRIANGLE_STRIP, 108748, gl.UNSIGNED_SHORT, 0);
-        //gl.drawElements(gl.LINE_STRIP, 108748 / 3, gl.UNSIGNED_SHORT, 0);
-        gl.drawElements(gl.LINE_STRIP, buffers.size as number, gl.UNSIGNED_SHORT, 0);
-    }
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -405,9 +391,27 @@ function drawScene(
     Mat4.invert(uNMatrix, uMVMatrix);
     Mat4.transpose(uNMatrix, uNMatrix);
 
-    drawBuffer();
+    bindBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
+    bindBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
+    bindBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+    gl.useProgram(program);
+    gl.uniformMatrix4fv(
+        program.uniforms.uNMatrix,
+        false,
+        uNMatrix
+    );
+    gl.uniformMatrix4fv(
+        program.uniforms.uPMatrix,
+        false,
+        uPMatrix
+    );
+    gl.uniformMatrix4fv(
+        program.uniforms.uMVMatrix,
+        false,
+        uMVMatrix
+    );
+    gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
 
-    // Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
-    // drawCube();
-
+    gl.drawElements(gl.TRIANGLES, buffers.size as number, gl.UNSIGNED_SHORT, 0);
 }
