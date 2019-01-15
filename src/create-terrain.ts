@@ -1,4 +1,4 @@
-async function createTerrain(src: string, levels: number, size: number) {
+export async function createTerrain(src: string, levels: number, size: number) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
     canvas.width = image.width;
@@ -14,7 +14,8 @@ async function createTerrain(src: string, levels: number, size: number) {
 
     const width = Math.floor(image.width / size);
     const height = Math.floor(image.height / size);
-    const heatmap = new Int32Array(width * height);
+    const heatmap = new Float32Array(width * height);
+    let max = 0;
 
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j ++) {
@@ -24,11 +25,57 @@ async function createTerrain(src: string, levels: number, size: number) {
                     s += u32[(i * size * image.width + j * size + k * size + l) * 4]
                 }
             }
-            heatmap[i * width + j] = Math.floor(s / size / size / levelHeight);
+            const v = Math.floor(s / size / size / levelHeight);
+            heatmap[i * width + j] = v;
+            if (max < v) {
+                max = v;
+            }
+        }
+    }
+
+    // const width = 2;
+    // const height = 2;
+    // const heatmap = [0, 1, 0, 1];
+
+    const position = [];
+    const indices = [];
+    const colors = [];
+
+    for (let i = 0; i < height; i ++) {
+        for (let j = 0; j < width; j++) {
+            const k = i * width + j
+            //position.push(i, heatmap[k], j)
+            position.push(i, j, heatmap[k]);
+            const c = (1 + heatmap[k]) / (1 + max);
+            //const c = 1;
+            colors.push(c, c, c, 1)
+
+            if ((i !== height - 1) && (j !== width - 1)) {
+                indices.push(
+                    k,
+                    k + 1,
+                    k + width,
+                    k, // why the hell we need this?
+                    k + 1,
+                    k + width + 1,
+                    k + width,
+                );
+            }
+            
         }
     }
 
     print(heatmap, width);
+    // print(position, width);
+    console.log({width, height})
+    console.log(position)
+    console.log(indices)
+
+    return {
+        position: new Float32Array(position),
+        indices: new Uint16Array(indices),
+        colors: new Float32Array(colors)
+    }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -40,9 +87,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     })
 }
 
-function print(arr: Int32Array, width: number) {
+function print(arr: any, width: number) {
     const lines = [];
-    for (let i = 0; i < arr.length / width - 1; i ++) {
+    for (let i = 0; i < arr.length / width; i ++) {
         const line = arr.slice(width * i, width * (i + 1)).join(' ');
         lines.push(line);
     }
@@ -50,4 +97,4 @@ function print(arr: Int32Array, width: number) {
 }
 
 
-createTerrain('/heatmap2.jpg', 8, 4);
+//createTerrain('/heatmap2.jpg', 8, 64);

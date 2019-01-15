@@ -1,11 +1,11 @@
-import {mat4 as Mat4} from 'gl-matrix';
+import {mat4 as Mat4, vec3 as Vec3} from 'gl-matrix';
 import vertextShaderSource from './shaders/vertex.glsl';
 import fragmentShaderSource from './shaders/fragment.glsl';
-import './create-terrain';
+import {createTerrain} from './create-terrain';
 
 window.addEventListener('load', setup);
 
-function setup() {
+async function setup() {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -17,23 +17,33 @@ function setup() {
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
     const buffers = createBuffers(gl);
-    if (!buffers || !program) {
+    const terrain = await initTerrain(gl);
+    if (!buffers || !program || !terrain) {
         return;
     }
 
     const properties = {
-        rotation: Mat4.create()
+        rotation: Mat4.create(),
+        translate: Vec3.fromValues(-5, -5, -20)
     };
 
     const eventTarget = initControls(canvas);
     eventTarget.addEventListener('change', e => {
-        const {detail: {dx, dy}} = e as CustomEvent;
-        const {rotation} = properties;
-        Mat4.rotate(rotation, rotation, dx, [0, 1, 0]);
-        Mat4.rotate(rotation, rotation, dy, [1, 0, 0]);
+        const {detail: {rx, ry, rz, dx, dy, dz}} = e as CustomEvent;
+        const {rotation, translate} = properties;
+        if (rx) {
+            Mat4.rotate(rotation, rotation, rx, [1, 0, 0]);
+        }
+        if (ry) {
+            Mat4.rotate(rotation, rotation, ry, [0, 1, 0]);
+        }
+        if (rz) {
+            Mat4.rotate(rotation, rotation, rz, [0, 0, 1]);
+        }
+        Vec3.add(translate, translate, [dx, dy, dz])
     })
     function render() {
-        drawScene(program!, buffers, properties);
+        drawScene(program!, terrain!, properties);
         requestAnimationFrame(render);
     }
     
@@ -41,10 +51,26 @@ function setup() {
 
 }
 
+async function initTerrain(gl: WebGLRenderingContext) {
+    const terrain = await createTerrain('/heatmap1.jpg', 32, 16);
+    if (!terrain) {
+        return terrain;
+    }
+    return {
+        position: createBuffer(gl, gl.ARRAY_BUFFER, terrain.position),
+        color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(terrain.colors)),
+        indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, terrain.indices),
+        // normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(vertexNormals))
+        size: terrain.indices.length
+    }
+}
+
 function initControls(canvas: HTMLElement) {
     let mouseDown = false;
     const ee = new EventTarget();
-    const s = 15 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
+    const s = 1 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
+    const s1 = 100 * s;
+    const s2 = 15 * s;
     const pressed: {[key: string]: boolean} = {};
     const onChange = (detail: any) => {
         ee.dispatchEvent(new CustomEvent('change', {detail}))
@@ -52,24 +78,48 @@ function initControls(canvas: HTMLElement) {
     const pullKeys = () => {
         let dx = 0;
         let dy = 0;
+        let dz = 0;
+        let rx = 0;
+        let ry = 0;
+        let rz = 0;
+
         if (pressed.w) {
-            dy = s;
+            dz = s1;
         } else if (pressed.s) {
-            dy = -s;
+            dz = -s1;
+        }
+
+        if (pressed.e) {
+            dy = -s1
+        } else if (pressed.q) {
+            dy = s1
         }
 
         if (pressed.a) {
-            dx = -s;
+            dx = s1;
         } else if (pressed.d) {
-            dx = s;
+            dx = -s1;
         }
-        if (dx || dy) {
-            onChange({dx, dy})
+
+        if (pressed.j) {
+            rx = s2;
+        } else if (pressed.k) {
+            rx = -s2;
+        }
+        if (pressed.h) {
+            ry = s2;
+        } else if (pressed.l) {
+            ry = -s2;
+        }
+
+        if (dx || dy || dz || rx || ry || rz) {
+            onChange({dx, dy, dz, rx, ry, rz})
         }
         requestAnimationFrame(pullKeys);
     }
     pullKeys();
 
+    /*
     canvas.addEventListener('mousedown', () => {
         mouseDown = true;
     });
@@ -80,10 +130,11 @@ function initControls(canvas: HTMLElement) {
         if (!mouseDown) {
             return;
         }
-        const dx = e.movementX / canvas.clientWidth;
-        const dy = e.movementY / canvas.clientHeight;
-        onChange({dx, dy});
+        const rx = e.movementX / canvas.clientWidth;
+        const ry = e.movementY / canvas.clientHeight;
+        onChange({rx, ry});
     });
+    */
     window.addEventListener('keypress', e => {
         pressed[e.key] = true;
     })
@@ -297,9 +348,10 @@ function sendBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
 
 function drawScene(
     program: Program,
-    buffers: {[key: string]: WebGLBuffer},
+    buffers: {[key: string]: WebGLBuffer | number},
     properties: {
-        rotation: Mat4
+        rotation: Mat4,
+        translate: Vec3
     }
 ) {
     const {gl} = program;
@@ -310,10 +362,10 @@ function drawScene(
     const uMVMatrix = Mat4.create();
     const uNMatrix = Mat4.create();
 
-    function drawCube() {
+    function drawBuffer() {
         sendBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
         sendBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
-        sendBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
+        //sendBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
         gl.useProgram(program);
         gl.uniformMatrix4fv(
@@ -332,7 +384,9 @@ function drawScene(
             uMVMatrix
         );
 
-        gl.drawElements(gl.TRIANGLE_STRIP, 36, gl.UNSIGNED_SHORT, 0);
+        //gl.drawElements(gl.TRIANGLE_STRIP, 108748, gl.UNSIGNED_SHORT, 0);
+        //gl.drawElements(gl.LINE_STRIP, 108748 / 3, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.LINE_STRIP, buffers.size as number, gl.UNSIGNED_SHORT, 0);
     }
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -345,15 +399,15 @@ function drawScene(
     const fovy = 45 * Math.PI / 180;
     const ratio = width / height;
     Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 1000.0);
-    Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
+    Mat4.translate(uMVMatrix, uMVMatrix, properties.translate);
     Mat4.mul(uMVMatrix, uMVMatrix, properties.rotation);
 
     Mat4.invert(uNMatrix, uMVMatrix);
     Mat4.transpose(uNMatrix, uNMatrix);
 
-    drawCube();
+    drawBuffer();
 
-    Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
-    drawCube();
+    // Mat4.translate(uMVMatrix, uMVMatrix, [-0.0, 0.0, -6.0]);
+    // drawCube();
 
 }
