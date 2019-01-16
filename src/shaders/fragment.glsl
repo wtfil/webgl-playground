@@ -5,6 +5,8 @@ varying lowp vec2 vTextureCoord;
 uniform sampler2D uTexture;
 
 void main() {
-  //lowp vec4 color = texture2D(uTexture, vTextureCoord);
-  gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+  lowp vec4 color = texture2D(uTexture, vTextureCoord);
+  //gl_FragColor = texture2D(uTexture, vTextureCoord);
+  //gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+  gl_FragColor = vec4(color.rgb * vLighting, color.a);
 }

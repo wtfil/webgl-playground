@@ -17,9 +17,9 @@ async function setup() {
     document.body.appendChild(canvas);
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
-    const cubeBuffers = await createBuffers(gl, createCube());
+    const cube = await createBuffers(gl, createCube());
     const terrain = await initTerrain(gl);
-    if (!cubeBuffers || !program || !terrain) {
+    if (!cube || !program || !terrain) {
         return;
     }
 
@@ -48,7 +48,7 @@ async function setup() {
         Vec3.add(translate, translate, [dx, dy, dz])
     })
     function render() {
-        drawScene(program!, cubeBuffers!, properties);
+        drawScene(program!, terrain!, properties);
         requestAnimationFrame(render);
     }
     
@@ -57,12 +57,11 @@ async function setup() {
 }
 
 async function initTerrain(gl: WebGLRenderingContext) {
-    const terrain = await createTerrain('/heatmap1.jpg', 32, 16);
+    const terrain = await createTerrain('/heatmap1.jpg', 32, 8);
     return terrain && createBuffers(gl, terrain);
 }
 
 function initControls(canvas: HTMLElement) {
-    let mouseDown = false;
     const ee = new EventTarget();
     const s = 1 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
     const s1 = 100 * s;
@@ -121,22 +120,6 @@ function initControls(canvas: HTMLElement) {
     }
     pullKeys();
 
-    /*
-    canvas.addEventListener('mousedown', () => {
-        mouseDown = true;
-    });
-    window.addEventListener('mouseup', () => {
-        mouseDown = false;
-    });
-    canvas.addEventListener('mousemove', e => {
-        if (!mouseDown) {
-            return;
-        }
-        const rx = e.movementX / canvas.clientWidth;
-        const ry = e.movementY / canvas.clientHeight;
-        onChange({rx, ry});
-    });
-    */
     window.addEventListener('keypress', e => {
         pressed[e.key] = true;
     })
@@ -227,35 +210,22 @@ async function loadTexture(gl: WebGLRenderingContext, url: string) {
         image.onerror = reject;
     });
     const texture = gl.createTexture();
-    const level = 0;
-    const internalFormat = gl.RGBA;
-    const srcFormat = gl.RGBA;
-    const srcType = gl.UNSIGNED_BYTE;
-    const isPowerOf2 = (value: number) => (value & (value - 1)) == 0;
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(
-        gl.TEXTURE_2D, level, internalFormat,
-        1, 1, 0, srcFormat, srcType,
+        gl.TEXTURE_2D, 0, gl.RGBA,
+        1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
         new Uint8Array([0, 0, 255, 255])
     );
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(
-        gl.TEXTURE_2D, level, internalFormat,
-        srcFormat, srcType, image
+        gl.TEXTURE_2D, 0, gl.RGBA,
+        gl.RGBA, gl.UNSIGNED_BYTE, image
     );
-    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-        // Yes, it's a power of 2. Generate mips.
-        gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-        // No, it's not a power of 2. Turn off mips and set
-        // wrapping to clamp to edge
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    }
-    return texture;
+    gl.generateMipmap(gl.TEXTURE_2D);
+
+    return texture as WebGLTexture;
 
 }
 
@@ -274,6 +244,7 @@ async function createBuffers(
             normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.normals)),
             texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
         },
+        texture,
         size: arrays.indices.length
     }
 }
@@ -308,7 +279,8 @@ function drawScene(
         buffers: {
             [key: string]: WebGLBuffer
         },
-        size: number
+        size: number,
+        texture: WebGLTexture
     },
     properties: {
         rotation: Mat4,
@@ -341,11 +313,17 @@ function drawScene(
     Mat4.transpose(uNMatrix, uNMatrix);
 
     bindBuffer(gl, buffers.buffers.position, program.attributes.aVertexPosition, 3);
-    bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
-    //bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
+    //bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
+    bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
     bindBuffer(gl, buffers.buffers.normal, program.attributes.aVertexNormal, 3);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.buffers.indices);
+
     gl.useProgram(program);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, buffers.texture);
+    gl.uniform1i(program.uniforms.uTexture, 0);
+
     gl.uniformMatrix4fv(
         program.uniforms.uNMatrix,
         false,
@@ -362,6 +340,7 @@ function drawScene(
         uMVMatrix
     );
     gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
+
 
     gl.drawElements(gl.TRIANGLES, buffers.size, gl.UNSIGNED_SHORT, 0);
 }

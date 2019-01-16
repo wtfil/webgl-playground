@@ -41,6 +41,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     const indices = [];
     const colors = [];
     const normals = [];
+    const texture = [];
 
     console.time('indicies')
     for (let i = 0; i < height; i ++) {
@@ -61,6 +62,14 @@ export async function createTerrain(src: string, levels: number, size: number) {
                     k + 1,
                     k + width + 1,
                     k + width,
+                );
+                texture.push(
+                    0, 0,
+                    1, 0,
+                    0, 1,
+                    1, 0,
+                    1, 1,
+                    1, 0
                 );
             }
             
@@ -100,12 +109,13 @@ export async function createTerrain(src: string, levels: number, size: number) {
         normals.push(p2[0], p2[1], p2[2]);
     }
     console.timeEnd('normals')
-
+    
     return {
         position,
         indices,
         colors,
-        normals
+        normals,
+        texture
     }
 }
 
