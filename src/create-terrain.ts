@@ -46,7 +46,8 @@ export async function createTerrain(src: string, levels: number, size: number) {
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
-            const c = (1 + heatmap[k]) / (1 + max);
+            //const c = (1 + heatmap[k]) / (1 + max);
+            const c = 1;
             position.push(i, j, heatmap[k]);
             colors.push(c, c, c, 1)
 
@@ -87,6 +88,11 @@ export async function createTerrain(src: string, levels: number, size: number) {
             position[i3 + 1],
             position[i3 + 2]
         );
+        /**
+         * U = p2 - p1
+         * V = p3 - p1
+         * N = U x V
+         */
         Vec3.subtract(p2, p2, p1)
         Vec3.subtract(p3, p3, p1)
         Vec3.cross(p2, p2, p3)
@@ -96,10 +102,10 @@ export async function createTerrain(src: string, levels: number, size: number) {
     console.timeEnd('normals')
 
     return {
-        position: new Float32Array(position),
-        indices: new Uint16Array(indices),
-        colors: new Float32Array(colors),
-        normals: new Float32Array(normals)
+        position,
+        indices,
+        colors,
+        normals
     }
 }
 

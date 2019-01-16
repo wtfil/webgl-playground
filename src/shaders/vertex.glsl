@@ -1,6 +1,7 @@
 attribute vec4 aVertexPosition;
 attribute vec4 aVertexColor;
 attribute vec3 aVertexNormal;
+attribute vec2 aTextureCoord;
 
 uniform mat4 uNMatrix;
 uniform mat4 uMVMatrix;
@@ -9,6 +10,7 @@ uniform vec3 uDirectionalLightVector;
 
 varying lowp vec4 vColor;
 varying highp vec3 vLighting;
+varying lowp vec2 vTextureCoord;
 
 void main() {
   // light
@@ -25,4 +27,5 @@ void main() {
 
   // color
   vColor = aVertexColor;
+  vTextureCoord = aTextureCoord;
 }

@@ -2,6 +2,7 @@ import {mat4 as Mat4, vec3 as Vec3} from 'gl-matrix';
 import vertextShaderSource from './shaders/vertex.glsl';
 import fragmentShaderSource from './shaders/fragment.glsl';
 import {createTerrain} from './create-terrain';
+import {createCube} from './create-cube';
 
 window.addEventListener('load', setup);
 
@@ -16,15 +17,15 @@ async function setup() {
     document.body.appendChild(canvas);
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
-    const buffers = createBuffers(gl);
+    const cubeBuffers = await createBuffers(gl, createCube());
     const terrain = await initTerrain(gl);
-    if (!buffers || !program || !terrain) {
+    if (!cubeBuffers || !program || !terrain) {
         return;
     }
 
     const properties = {
         rotation: Mat4.create(),
-        translate: Vec3.fromValues(-5, -5, -20),
+        translate: Vec3.fromValues(-23.5, -25.6, -79.9),
         directionalLightVector: Vec3.fromValues(0.85, 0.8, 0.75)
     };
 
@@ -42,12 +43,12 @@ async function setup() {
             Mat4.rotate(rotation, rotation, rz, [0, 0, 1]);
         }
         if (dl) {
-            Vec3.rotateZ(directionalLightVector, directionalLightVector, [1, 0, 0], 10 * dl);
+            Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 0], 10 * dl);
         }
         Vec3.add(translate, translate, [dx, dy, dz])
     })
     function render() {
-        drawScene(program!, terrain!, properties);
+        drawScene(program!, cubeBuffers!, properties);
         requestAnimationFrame(render);
     }
     
@@ -57,16 +58,7 @@ async function setup() {
 
 async function initTerrain(gl: WebGLRenderingContext) {
     const terrain = await createTerrain('/heatmap1.jpg', 32, 16);
-    if (!terrain) {
-        return terrain;
-    }
-    return {
-        position: createBuffer(gl, gl.ARRAY_BUFFER, terrain.position),
-        color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(terrain.colors)),
-        indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, terrain.indices),
-        normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(terrain.normals)),
-        size: terrain.indices.length
-    }
+    return terrain && createBuffers(gl, terrain);
 }
 
 function initControls(canvas: HTMLElement) {
@@ -173,15 +165,10 @@ function createShader(gl: WebGLRenderingContext, type: number, source: string) {
 
 export type Program = WebGLProgram & {
     uniforms: {
-        uMVMatrix: WebGLUniformLocation;
-        uPMatrix: WebGLUniformLocation;
-        uNMatrix: WebGLUniformLocation;
-        uDirectionalLightVector: WebGLUniformLocation;
+        [key: string]: WebGLUniformLocation
     },
     attributes: {
-        aVertexPosition: number;
-        aVertexColor: number;
-        aVertexNormal: number;
+        [key: string]: number;
     },
     gl: WebGLRenderingContext;
 }
@@ -218,119 +205,76 @@ function createProgram(
         uMVMatrix: getUniform('uMVMatrix'),
         uPMatrix: getUniform('uPMatrix'),
         uNMatrix: getUniform('uNMatrix'),
-        uDirectionalLightVector: getUniform('uDirectionalLightVector')
+        uDirectionalLightVector: getUniform('uDirectionalLightVector'),
+        uTexture: getUniform('uTexture')
     };
     program.attributes = {
         aVertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
         aVertexColor: gl.getAttribLocation(program, 'aVertexColor'),
-        aVertexNormal: gl.getAttribLocation(program, 'aVertexNormal')
+        aVertexNormal: gl.getAttribLocation(program, 'aVertexNormal'),
+        aTextureCoord: gl.getAttribLocation(program, 'aTextureCoord')
     };
     program.gl = gl;
 
     return program;
 }
 
-function createBuffers(gl: WebGLRenderingContext) {
-    const positions = [
-        // Front face
-        -1.0, -1.0,  1.0,
-         1.0, -1.0,  1.0,
-         1.0,  1.0,  1.0,
-        -1.0,  1.0,  1.0,
-        // Back face
-        -1.0, -1.0, -1.0,
-        -1.0,  1.0, -1.0,
-         1.0,  1.0, -1.0,
-         1.0, -1.0, -1.0,
-        // Top face
-        -1.0,  1.0, -1.0,
-        -1.0,  1.0,  1.0,
-         1.0,  1.0,  1.0,
-         1.0,  1.0, -1.0,
-        // Bottom face
-        -1.0, -1.0, -1.0,
-         1.0, -1.0, -1.0,
-         1.0, -1.0,  1.0,
-        -1.0, -1.0,  1.0,
-        // Right face
-         1.0, -1.0, -1.0,
-         1.0,  1.0, -1.0,
-         1.0,  1.0,  1.0,
-         1.0, -1.0,  1.0,
-        // Left face
-        -1.0, -1.0, -1.0,
-        -1.0, -1.0,  1.0,
-        -1.0,  1.0,  1.0,
-        -1.0,  1.0, -1.0,
-    ];
-    const faceColors = [
-        [1.0, 1.0, 1.0, 1.0],    // Front face: white
-        [1.0, 0.0, 0.0, 1.0],    // Back face: red
-        [0.0, 1.0, 0.0, 1.0],    // Top face: green
-        [0.0, 0.0, 1.0, 1.0],    // Bottom face: blue
-        [1.0, 1.0, 0.0, 1.0],    // Right face: yellow
-        [1.0, 0.0, 1.0, 1.0],    // Left face: purple
-    ];
+async function loadTexture(gl: WebGLRenderingContext, url: string) {
+    const image: HTMLImageElement = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.src = url;
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+    });
+    const texture = gl.createTexture();
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const isPowerOf2 = (value: number) => (value & (value - 1)) == 0;
 
-    let colors: number[] = [];
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D, level, internalFormat,
+        1, 1, 0, srcFormat, srcType,
+        new Uint8Array([0, 0, 255, 255])
+    );
 
-    for (var j = 0; j < faceColors.length; ++j) {
-        const c = faceColors[j];
-        colors = colors.concat(c, c, c, c);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D, level, internalFormat,
+        srcFormat, srcType, image
+    );
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+        // Yes, it's a power of 2. Generate mips.
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        // No, it's not a power of 2. Turn off mips and set
+        // wrapping to clamp to edge
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
+    return texture;
 
-    const vertexNormals = [
-        // Front
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
+}
 
-        // Back
-        0.0, 0.0, -1.0,
-        0.0, 0.0, -1.0,
-        0.0, 0.0, -1.0,
-        0.0, 0.0, -1.0,
-
-        // Top
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-
-        // Bottom
-        0.0, -1.0, 0.0,
-        0.0, -1.0, 0.0,
-        0.0, -1.0, 0.0,
-        0.0, -1.0, 0.0,
-
-        // Right
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-
-        // Left
-        -1.0, 0.0, 0.0,
-        -1.0, 0.0, 0.0,
-        -1.0, 0.0, 0.0,
-        -1.0, 0.0, 0.0
-    ];
-
-    const indices = [
-        0, 1, 2, 0, 2, 3,    // front
-        4, 5, 6, 4, 6, 7,    // back
-        8, 9, 10, 8, 10, 11,   // top
-        12, 13, 14, 12, 14, 15,   // bottom
-        16, 17, 18, 16, 18, 19,   // right
-        20, 21, 22, 20, 22, 23,   // left
-    ];
-
+async function createBuffers(
+    gl: WebGLRenderingContext,
+    arrays: {
+        [key: string]: number[]
+    }
+) {
+    const texture = await loadTexture(gl, '/texture1.png');
     return {
-        position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(positions)),
-        color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(colors)),
-        indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices)),
-        normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(vertexNormals))
+        buffers: {
+            position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
+            color: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.colors)),
+            indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(arrays.indices)),
+            normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.normals)),
+            texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
+        },
+        size: arrays.indices.length
     }
 }
 
@@ -360,7 +304,12 @@ function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
 
 function drawScene(
     program: Program,
-    buffers: {[key: string]: WebGLBuffer | number},
+    buffers: {
+        buffers: {
+            [key: string]: WebGLBuffer
+        },
+        size: number
+    },
     properties: {
         rotation: Mat4,
         translate: Vec3,
@@ -391,10 +340,11 @@ function drawScene(
     Mat4.invert(uNMatrix, uMVMatrix);
     Mat4.transpose(uNMatrix, uNMatrix);
 
-    bindBuffer(gl, buffers.position, program.attributes.aVertexPosition, 3);
-    bindBuffer(gl, buffers.color, program.attributes.aVertexColor, 4);
-    bindBuffer(gl, buffers.normal, program.attributes.aVertexNormal, 3);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+    bindBuffer(gl, buffers.buffers.position, program.attributes.aVertexPosition, 3);
+    bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
+    //bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
+    bindBuffer(gl, buffers.buffers.normal, program.attributes.aVertexNormal, 3);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.buffers.indices);
     gl.useProgram(program);
     gl.uniformMatrix4fv(
         program.uniforms.uNMatrix,
@@ -413,5 +363,5 @@ function drawScene(
     );
     gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
 
-    gl.drawElements(gl.TRIANGLES, buffers.size as number, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, buffers.size, gl.UNSIGNED_SHORT, 0);
 }
