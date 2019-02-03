@@ -8,13 +8,14 @@ uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform vec3 uDirectionalLightVector;
 
-varying lowp vec4 vColor;
 varying highp vec3 vLighting;
 varying lowp vec2 vTextureCoord;
+varying lowp vec4 vVertextColor;
 
 void main() {
   // light
-  highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+  //highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+  highp vec3 ambientLight = vec3(0, 0, 0);
   highp vec3 directionalLightColor = vec3(1, 1, 1);
   highp vec3 directionalVector = normalize(uDirectionalLightVector);
 
@@ -25,7 +26,9 @@ void main() {
   // position
   gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
 
-  // color
-  vColor = aVertexColor;
+  // texture
   vTextureCoord = aTextureCoord;
+
+  // color; this is optional in fragment shader
+  vVertextColor = aVertexColor;
 }

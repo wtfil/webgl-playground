@@ -43,25 +43,23 @@ export async function createTerrain(src: string, levels: number, size: number) {
     const normals = [];
     const texture = [];
 
+    const points = [];
     console.time('indicies')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
-            //const c = (1 + heatmap[k]) / (1 + max);
-            const c = 1;
+            const c = (1 + heatmap[k]) / (1 + max);
             position.push(i, j, heatmap[k]);
             colors.push(c, c, c, 1)
-
-            //normals.push(1, 1, 1);
 
             if ((i !== height - 1) && (j !== width - 1)) {
                 indices.push(
                     k,
-                    k + 1,
                     k + width,
                     k + 1,
+                    k + 1,
+                    k + width,
                     k + width + 1,
-                    k + width,
                 );
                 texture.push(
                     0, 0,
@@ -78,36 +76,95 @@ export async function createTerrain(src: string, levels: number, size: number) {
     console.timeEnd('indicies')
 
     console.time('normals')
-    for (let i = 0; i < indices.length / 3; i ++) {
-        const i1 = indices[i * 3];
-        const i2 = indices[i * 3 + 1];
-        const i3 = indices[i * 3 + 2];
-        const p1 = Vec3.fromValues(
-            position[i1],
-            position[i1 + 1],
-            position[i1 + 2]
-        );
-        const p2 = Vec3.fromValues(
-            position[i2],
-            position[i2 + 1],
-            position[i2 + 2]
-        );
-        const p3 = Vec3.fromValues(
-            position[i3],
-            position[i3 + 1],
-            position[i3 + 2]
-        );
-        /**
-         * U = p2 - p1
-         * V = p3 - p1
-         * N = U x V
-         */
-        Vec3.subtract(p2, p2, p1)
-        Vec3.subtract(p3, p3, p1)
-        Vec3.cross(p2, p2, p3)
-        Vec3.normalize(p2, p2);
-        normals.push(p2[0], p2[1], p2[2]);
+    for (let i = 0; i < position.length / 3; i ++) {
+        const w = width;
+        const h = height;
+        const iw = i % w;
+        const ih = ~~(i / w);
+        const facesIndexes = [
+            iw > 0 && ih > 0 && [
+                i - w,
+                i - 1,
+                i,
+            ],
+            iw + 1 < w && ih > 0 && [
+                i - w,
+                i,
+                i - w + 1,
+            ],
+            iw + 1 < w && ih > 0 && [
+                i - w + 1,
+                i,
+                i + 1,
+            ],
+            iw > 0 && ih < h && [
+                i - 1,
+                i + w - 1,
+                i,
+            ],
+            iw > 0 && ih < h && [
+                i,
+                i + w - 1,
+                i + w,
+            ],
+            iw + 1 < w && ih < h && [
+                i,
+                i + w,
+                i + 1,
+            ],
+        ];
+        const faces = [];
+        const facesNormals = [];
+
+        for (let j = 0; j < facesIndexes.length; j ++) {
+            const f = facesIndexes[j];
+            for (let k = 0; k < 3; k ++) {
+                if (f) {
+                    faces.push(
+                        position[f[k] * 3],
+                        position[f[k] * 3 + 1],
+                        position[f[k] * 3 + 2],
+                    )
+                }
+            }
+        }
+        for (let j = 0; j < faces.length / 9; j ++) {
+            const p1 = Vec3.fromValues(
+                faces[j * 9 + 0],
+                faces[j * 9 + 1],
+                faces[j * 9 + 2]
+            );
+            const p2 = Vec3.fromValues(
+                faces[j * 9 + 3],
+                faces[j * 9 + 4],
+                faces[j * 9 + 5]
+            );
+            const p3 = Vec3.fromValues(
+                faces[j * 9 + 6],
+                faces[j * 9 + 7],
+                faces[j * 9 + 8]
+            );
+            ////
+            // U = p2 - p1
+            // V = p3 - p1
+            // N = U x V
+            ////
+            Vec3.subtract(p2, p2, p1)
+            Vec3.subtract(p3, p3, p1)
+            Vec3.cross(p2, p2, p3)
+            Vec3.normalize(p2, p2);
+            facesNormals.push(p2);
+        }
+
+        const n = Vec3.fromValues(0, 0, 0);
+        for (let j = 0; j < facesNormals.length; j ++) {
+            Vec3.add(n, n, facesNormals[j]);
+        }
+        Vec3.normalize(n, n);
+
+        normals.push(n[0], n[1], n[2]);
     }
+
     console.timeEnd('normals')
     
     return {

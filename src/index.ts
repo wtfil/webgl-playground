@@ -49,6 +49,7 @@ async function setup() {
     })
     function render() {
         drawScene(program!, terrain!, properties);
+        //drawScene(program!, cube!, properties);
         requestAnimationFrame(render);
     }
     
@@ -57,7 +58,7 @@ async function setup() {
 }
 
 async function initTerrain(gl: WebGLRenderingContext) {
-    const terrain = await createTerrain('/heatmap1.jpg', 32, 8);
+    const terrain = await createTerrain('/heatmap1.jpg', 64, 8);
     return terrain && createBuffers(gl, terrain);
 }
 
@@ -235,7 +236,7 @@ async function createBuffers(
         [key: string]: number[]
     }
 ) {
-    const texture = await loadTexture(gl, '/texture1.png');
+    const texture = await loadTexture(gl, '/texture2.png');
     return {
         buffers: {
             position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
@@ -297,7 +298,7 @@ function drawScene(
     const uNMatrix = Mat4.create();
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(135 / 256, 206 / 256, 235 / 256, 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
@@ -306,17 +307,18 @@ function drawScene(
     const fovy = 45 * Math.PI / 180;
     const ratio = width / height;
     Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 1000.0);
-    Mat4.translate(uMVMatrix, uMVMatrix, properties.translate);
-    Mat4.mul(uMVMatrix, uMVMatrix, properties.rotation);
 
     Mat4.invert(uNMatrix, uMVMatrix);
     Mat4.transpose(uNMatrix, uNMatrix);
 
     bindBuffer(gl, buffers.buffers.position, program.attributes.aVertexPosition, 3);
-    //bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
+    bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
     bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
     bindBuffer(gl, buffers.buffers.normal, program.attributes.aVertexNormal, 3);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.buffers.indices);
+
+    Mat4.translate(uMVMatrix, uMVMatrix, properties.translate);
+    Mat4.mul(uMVMatrix, uMVMatrix, properties.rotation);
 
     gl.useProgram(program);
 
@@ -340,7 +342,6 @@ function drawScene(
         uMVMatrix
     );
     gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
-
 
     gl.drawElements(gl.TRIANGLES, buffers.size, gl.UNSIGNED_SHORT, 0);
 }
