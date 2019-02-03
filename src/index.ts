@@ -236,7 +236,7 @@ async function createBuffers(
         [key: string]: number[]
     }
 ) {
-    const texture = await loadTexture(gl, '/texture2.png');
+    const texture = await loadTexture(gl, '/texture6.png');
     return {
         buffers: {
             position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
