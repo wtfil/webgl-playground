@@ -17,16 +17,19 @@ async function setup() {
     document.body.appendChild(canvas);
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
-    const cube = await createBuffers(gl, createCube());
-    const terrain = await initTerrain(gl);
+    // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
+    // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
+    const texture = await loadTexture(gl, '/textures/texture2.png');
+    const terrain = await initTerrain(gl, '/heatmaps/1.jpg', texture);
+    const cube = createBuffers(gl, createCube(), texture);
     if (!cube || !program || !terrain) {
         return;
     }
 
     const properties = {
         rotation: Mat4.create(),
-        translate: Vec3.fromValues(-23.5, -25.6, -79.9),
-        directionalLightVector: Vec3.fromValues(0.85, 0.8, 0.75)
+        translate: Vec3.fromValues(-50, -50, -200),
+        directionalLightVector: Vec3.fromValues(0, 0, 1)
     };
 
     const eventTarget = initControls(canvas);
@@ -44,6 +47,7 @@ async function setup() {
         }
         if (dl) {
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 0], 10 * dl);
+            Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 0, 1], 10 * dl);
         }
         Vec3.add(translate, translate, [dx, dy, dz])
     })
@@ -57,15 +61,15 @@ async function setup() {
 
 }
 
-async function initTerrain(gl: WebGLRenderingContext) {
-    const terrain = await createTerrain('/heatmap1.jpg', 64, 8);
-    return terrain && createBuffers(gl, terrain);
+async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
+    const terrain = await createTerrain(heatmapSrc, 64, 8);
+    return terrain && createBuffers(gl, terrain, texture);
 }
 
 function initControls(canvas: HTMLElement) {
     const ee = new EventTarget();
     const s = 1 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
-    const s1 = 100 * s;
+    const s1 = 400 * s;
     const s2 = 15 * s;
     const pressed: {[key: string]: boolean} = {};
     const onChange = (detail: any) => {
@@ -104,9 +108,9 @@ function initControls(canvas: HTMLElement) {
             rx = -s2;
         }
         if (pressed.h) {
-            ry = s2;
+            rz = s2;
         } else if (pressed.l) {
-            ry = -s2;
+            rz = -s2;
         }
         if (pressed['[']) {
             dl = s;
@@ -230,13 +234,13 @@ async function loadTexture(gl: WebGLRenderingContext, url: string) {
 
 }
 
-async function createBuffers(
+function createBuffers(
     gl: WebGLRenderingContext,
     arrays: {
         [key: string]: number[]
-    }
+    },
+    texture: WebGLTexture
 ) {
-    const texture = await loadTexture(gl, '/texture6.png');
     return {
         buffers: {
             position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
