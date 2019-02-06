@@ -17,43 +17,39 @@ async function setup() {
     document.body.appendChild(canvas);
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
-    // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
-    // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
-    const texture = await loadTexture(gl, '/textures/texture2.png');
-    const terrain = await initTerrain(gl, '/heatmaps/1.jpg', texture);
+    const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
+    const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
+    // const texture = await loadTexture(gl, '/textures/texture2.png');
+    // const terrain = await initTerrain(gl, '/heatmaps/1.jpg', texture);
     const cube = createBuffers(gl, createCube(), texture);
     if (!cube || !program || !terrain) {
         return;
     }
 
     const properties = {
-        rotation: Mat4.create(),
-        translate: Vec3.fromValues(-50, -50, -200),
+        cameraPosition: Vec3.fromValues(0, 0, 200),
+        center: Vec3.fromValues(0, 0, 0),
+        rotation: 0,
         directionalLightVector: Vec3.fromValues(0, 0, 1)
     };
 
     const eventTarget = initControls(canvas);
     eventTarget.addEventListener('change', e => {
         const {detail: {rx, ry, rz, dx, dy, dz, dl}} = e as CustomEvent;
-        const {rotation, translate, directionalLightVector} = properties;
-        if (rx) {
-            Mat4.rotate(rotation, rotation, rx, [1, 0, 0]);
-        }
-        if (ry) {
-            Mat4.rotate(rotation, rotation, ry, [0, 1, 0]);
-        }
-        if (rz) {
-            Mat4.rotate(rotation, rotation, rz, [0, 0, 1]);
-        }
+        const {center, cameraPosition, directionalLightVector} = properties;
         if (dl) {
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 0], 10 * dl);
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 0, 1], 10 * dl);
         }
-        Vec3.add(translate, translate, [dx, dy, dz])
+        Vec3.add(cameraPosition, cameraPosition, [rx + dx, ry + dy, rz + dz]);
+        Vec3.add(center, center, [dx, dy, dz]);
     })
     function render() {
-        drawScene(program!, terrain!, properties);
-        //drawScene(program!, cube!, properties);
+        properties.rotation += 0.005;
+        drawScene(program!, properties, [
+            terrain!,
+            // cube!
+        ])
         requestAnimationFrame(render);
     }
     
@@ -68,9 +64,7 @@ async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, textur
 
 function initControls(canvas: HTMLElement) {
     const ee = new EventTarget();
-    const s = 1 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
-    const s1 = 400 * s;
-    const s2 = 15 * s;
+    const s = 400 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
     const pressed: {[key: string]: boolean} = {};
     const onChange = (detail: any) => {
         ee.dispatchEvent(new CustomEvent('change', {detail}))
@@ -85,37 +79,37 @@ function initControls(canvas: HTMLElement) {
         let dl = 0;
 
         if (pressed.w) {
-            dz = s1;
+            dy = s;
         } else if (pressed.s) {
-            dz = -s1;
+            dy = -s;
         }
 
         if (pressed.e) {
-            dy = -s1
+            dz = s
         } else if (pressed.q) {
-            dy = s1
+            dz = -s
         }
 
         if (pressed.a) {
-            dx = s1;
+            dx = -s;
         } else if (pressed.d) {
-            dx = -s1;
+            dx = s;
         }
 
         if (pressed.j) {
-            rx = s2;
+            ry = -s;
         } else if (pressed.k) {
-            rx = -s2;
+            ry = s;
         }
         if (pressed.h) {
-            rz = s2;
+            rx = s;
         } else if (pressed.l) {
-            rz = -s2;
+            rx = -s;
         }
         if (pressed['[']) {
-            dl = s;
+            dl = s / 200;
         } else if (pressed[']']) {
-            dl = -s;
+            dl = -s / 200;
         }
 
         if (dx || dy || dz || rx || ry || rz || dl) {
@@ -280,18 +274,19 @@ function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
 
 function drawScene(
     program: Program,
-    buffers: {
+    properties: {
+        rotation: number,
+        cameraPosition: Vec3,
+        center: Vec3,
+        directionalLightVector: Vec3
+    },
+    objects: Array<{
         buffers: {
             [key: string]: WebGLBuffer
         },
         size: number,
         texture: WebGLTexture
-    },
-    properties: {
-        rotation: Mat4,
-        translate: Vec3,
-        directionalLightVector: Vec3
-    }
+    }>,
 ) {
     const {gl} = program;
     const width = gl.canvas.clientWidth;
@@ -312,40 +307,48 @@ function drawScene(
     const ratio = width / height;
     Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 1000.0);
 
+    Mat4.lookAt(uMVMatrix, properties.cameraPosition, properties.center, [0, 1, 0]);
+
     Mat4.invert(uNMatrix, uMVMatrix);
-    Mat4.transpose(uNMatrix, uNMatrix);
-
-    bindBuffer(gl, buffers.buffers.position, program.attributes.aVertexPosition, 3);
-    bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
-    bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
-    bindBuffer(gl, buffers.buffers.normal, program.attributes.aVertexNormal, 3);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.buffers.indices);
-
-    Mat4.translate(uMVMatrix, uMVMatrix, properties.translate);
-    Mat4.mul(uMVMatrix, uMVMatrix, properties.rotation);
+    Mat4.transpose(uNMatrix, uNMatrix)
 
     gl.useProgram(program);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, buffers.texture);
-    gl.uniform1i(program.uniforms.uTexture, 0);
+    for (let i = 0; i < objects.length; i ++) {
+        const buffers = objects[i];
 
-    gl.uniformMatrix4fv(
-        program.uniforms.uNMatrix,
-        false,
-        uNMatrix
-    );
-    gl.uniformMatrix4fv(
-        program.uniforms.uPMatrix,
-        false,
-        uPMatrix
-    );
-    gl.uniformMatrix4fv(
-        program.uniforms.uMVMatrix,
-        false,
-        uMVMatrix
-    );
-    gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
+        // Assuming that object has square size
+        const width = Math.sqrt(buffers.size / 6);
+        Mat4.translate(uMVMatrix, uMVMatrix, [-width / 2, -width / 2, 0]);
 
-    gl.drawElements(gl.TRIANGLES, buffers.size, gl.UNSIGNED_SHORT, 0);
+        bindBuffer(gl, buffers.buffers.position, program.attributes.aVertexPosition, 3);
+        bindBuffer(gl, buffers.buffers.color, program.attributes.aVertexColor, 4);
+        bindBuffer(gl, buffers.buffers.texture, program.attributes.aTextureCoord, 2);
+        bindBuffer(gl, buffers.buffers.normal, program.attributes.aVertexNormal, 3);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.buffers.indices);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, buffers.texture);
+
+        gl.uniformMatrix4fv(
+            program.uniforms.uNMatrix,
+            false,
+            uNMatrix
+        );
+        gl.uniformMatrix4fv(
+            program.uniforms.uPMatrix,
+            false,
+            uPMatrix
+        );
+        gl.uniformMatrix4fv(
+            program.uniforms.uMVMatrix,
+            false,
+            uMVMatrix
+        );
+        gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
+        gl.uniform1i(program.uniforms.uTexture, 0);
+
+        gl.drawElements(gl.TRIANGLES, buffers.size, gl.UNSIGNED_SHORT, 0);
+    }
+
 }
