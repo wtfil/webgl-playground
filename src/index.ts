@@ -17,8 +17,10 @@ async function setup() {
     document.body.appendChild(canvas);
 
     const program = createProgram(gl, vertextShaderSource, fragmentShaderSource);
-    const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
-    const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
+    const texture = await loadTexture(gl, '/textures/yosemite.png');
+    const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', texture);
+    // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
+    // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
     // const texture = await loadTexture(gl, '/textures/texture2.png');
     // const terrain = await initTerrain(gl, '/heatmaps/1.jpg', texture);
     const cube = createBuffers(gl, createCube(), texture);
@@ -58,7 +60,7 @@ async function setup() {
 }
 
 async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
-    const terrain = await createTerrain(heatmapSrc, 64, 8);
+    const terrain = await createTerrain(heatmapSrc, 16, 15);
     return terrain && createBuffers(gl, terrain, texture);
 }
 
@@ -97,19 +99,19 @@ function initControls(canvas: HTMLElement) {
         }
 
         if (pressed.j) {
-            ry = -s;
+            ry = -s * 3;
         } else if (pressed.k) {
-            ry = s;
+            ry = s * 3;
         }
         if (pressed.h) {
-            rx = s;
+            rx = -s * 3;
         } else if (pressed.l) {
-            rx = -s;
+            rx = s * 3;
         }
         if (pressed['[']) {
-            dl = s / 200;
+            dl = s / 400;
         } else if (pressed[']']) {
-            dl = -s / 200;
+            dl = -s / 400;
         }
 
         if (dx || dy || dz || rx || ry || rz || dl) {
