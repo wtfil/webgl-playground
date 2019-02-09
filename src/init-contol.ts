@@ -37,11 +37,11 @@ export function initControls(canvas: HTMLElement) {
         } else if (pressed.k) {
             ry = s * 3;
         }
-        // if (pressed.h) {
-        //     rx = -s * 3;
-        // } else if (pressed.l) {
-        //     rx = s * 3;
-        // }
+        if (pressed.h) {
+            rx = -s * 3;
+        } else if (pressed.l) {
+            rx = s * 3;
+        }
         if (pressed['[']) {
             dl = s / 400;
         } else if (pressed[']']) {

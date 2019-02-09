@@ -176,13 +176,14 @@ export async function createTerrain(src: string, levels: number, size: number) {
     }
 
     console.timeEnd('normals')
+    console.log({width, height})
     
     return {
         position,
         indices,
         colors,
         normals,
-        texture
+        texture,
     }
 }
 

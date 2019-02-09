@@ -23,22 +23,22 @@ async function setup() {
         vertextShaderSource,
         fragmentShaderSource,
         [
-            'uMVMatrix',
-            'uPMatrix',
-            'uNMatrix',
-            'uDirectionalLightVector',
-            'uTexture'
+            'model',
+            'projection',
+            'directionalLightVector',
+            'texture'
         ],
         [
-            'aVertexPosition',
-            'aVertexColor',
-            'aVertexNormal',
-            'aTextureCoord'
+            'position',
+            'color',
+            'normal',
+            'textureCoord'
         ]
     );
-    const texture = await loadTexture(gl, '/textures/yosemite.png');
-    const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', texture);
-    const water = createBuffers(gl, createWater(20, 20), texture);
+    const terrainTexture = await loadTexture(gl, '/textures/yosemite.png');
+    const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', terrainTexture);
+    const waterTexture = await loadTexture(gl, '/textures/water.png');
+    const water = createBuffers(gl, createWater(216, 216), waterTexture);
     // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
     // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
     // const texture = await loadTexture(gl, '/textures/texture2.png');
@@ -49,7 +49,7 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        cameraPosition: Vec3.fromValues(0, 0, 100),
+        cameraPosition: Vec3.fromValues(0, 0, 300),
         center: Vec3.fromValues(0, 0, 0),
         rotation: 0,
         directionalLightVector: Vec3.fromValues(0, 0, 1)
@@ -63,19 +63,14 @@ async function setup() {
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], 10 * dl);
         }
         Vec3.add(center, center, [dx, dy, dz]);
+        Vec3.add(cameraPosition, cameraPosition, [dx, dy, dz]);
 
-        if (rx || ry || rz) {
-            const move = Vec3.fromValues(rx, ry, rz);
-            const cameraVector = Vec3.fromValues(
-                cameraPosition[0] - center[0],
-                cameraPosition[1] - center[1],
-                cameraPosition[2] - center[2],
-            );
-            Vec3.cross(move, move, cameraVector);
-            Vec3.normalize(move, move);
-            Vec3.scale(move, move, rx + ry + rz);
-            Vec3.add(cameraPosition, cameraPosition, move);
-        }
+        const cameraVector = Vec3.create();
+        Vec3.negate(cameraVector, center);
+        Vec3.add(cameraVector, cameraVector, cameraPosition);
+        Vec3.rotateX(cameraVector, cameraVector, [0, 0, 0], rx / 30)
+        Vec3.rotateY(cameraVector, cameraVector, [0, 0, 0], ry / 100)
+        Vec3.add(cameraPosition, cameraVector, center);
     })
     function render() {
         drawScene({
@@ -92,7 +87,7 @@ async function setup() {
 }
 
 async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
-    const terrain = await createTerrain(heatmapSrc, 16, 15);
+    const terrain = await createTerrain(heatmapSrc, 30, 5);
     return terrain && createBuffers(gl, terrain, texture);
 }
 
@@ -228,9 +223,8 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
     const width = gl.canvas.clientWidth;
     const height = gl.canvas.clientHeight;
 
-    const uPMatrix = Mat4.create();
-    const uMVMatrix = Mat4.create();
-    const uNMatrix = Mat4.create();
+    const projection = Mat4.create();
+    const model = Mat4.create();
 
     gl.viewport(0, 0, width, height);
     gl.clearColor(135 / 256, 206 / 256, 235 / 256, 1.0);
@@ -241,15 +235,11 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
 
     const fovy = 45 * Math.PI / 180;
     const ratio = width / height;
-    Mat4.perspective(uPMatrix, fovy, ratio, 0.1, 1000.0);
+    Mat4.perspective(projection, fovy, ratio, 0.1, 1000.0);
 
-    Mat4.lookAt(uMVMatrix, properties.cameraPosition, properties.center, [0, 1, 0]);
+    Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
 
-    Mat4.invert(uNMatrix, uMVMatrix);
-    Mat4.transpose(uNMatrix, uNMatrix)
-
-
-    return {uPMatrix, uMVMatrix, uNMatrix}
+    return {model, projection}
 }
 
 function drawScene(props: {
@@ -260,43 +250,46 @@ function drawScene(props: {
 }) {
     const {program, properties, terrain, water} = props;
     const {gl} = program;
-    const {uPMatrix, uMVMatrix, uNMatrix} = prepareScene(gl, properties);
+    const {model, projection} = prepareScene(gl, properties);
 
     // Draw terrain
     gl.useProgram(program);
 
-    bindBuffer(gl, terrain.buffers.position, program.attributes.aVertexPosition, 3);
+    bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);
     // bindBuffer(gl, terrain.buffers.color, program.attributes.aVertexColor, 4);
-    bindBuffer(gl, terrain.buffers.texture, program.attributes.aTextureCoord, 2);
-    bindBuffer(gl, terrain.buffers.normal, program.attributes.aVertexNormal, 3);
+    bindBuffer(gl, terrain.buffers.texture, program.attributes.textureCoord, 2);
+    bindBuffer(gl, terrain.buffers.normal, program.attributes.normal, 3);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
 
     gl.uniformMatrix4fv(
-        program.uniforms.uNMatrix,
+        program.uniforms.projection,
         false,
-        uNMatrix
+        projection
     );
     gl.uniformMatrix4fv(
-        program.uniforms.uPMatrix,
+        program.uniforms.model,
         false,
-        uPMatrix
+        model
     );
-    gl.uniformMatrix4fv(
-        program.uniforms.uMVMatrix,
-        false,
-        uMVMatrix
-    );
-    gl.uniform3fv(program.uniforms.uDirectionalLightVector, new Float32Array(properties.directionalLightVector))
-    gl.uniform1i(program.uniforms.uTexture, 0);
+    gl.uniform3fv(program.uniforms.directionalLightVector, new Float32Array(properties.directionalLightVector))
+    gl.uniform1i(program.uniforms.texture, 0);
 
     gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
 
     // Draw water
-    bindBuffer(gl, water.buffers.position, program.attributes.aVertexPosition, 3);
-    bindBuffer(gl, water.buffers.texture, program.attributes.aTextureCoord, 2);
+    Mat4.translate(model, model, [0, 0, 4]);
+    gl.uniformMatrix4fv(
+        program.uniforms.model,
+        false,
+        model
+    );
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, water.texture);
+    bindBuffer(gl, water.buffers.position, program.attributes.position, 3);
+    bindBuffer(gl, water.buffers.texture, program.attributes.textureCoord, 2);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
     gl.drawElements(gl.TRIANGLES, water.size, gl.UNSIGNED_SHORT, 0);
 
