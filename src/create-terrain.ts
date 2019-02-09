@@ -48,7 +48,11 @@ export async function createTerrain(src: string, levels: number, size: number) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
             const c = (1 + heatmap[k]) / (1 + max);
-            position.push(i, j, heatmap[k]);
+            position.push(
+                i - height / 2,
+                j - width / 2,
+                heatmap[k]
+            );
             colors.push(c, c, c, 1)
 
             if ((i !== height - 1) && (j !== width - 1)) {
@@ -66,6 +70,20 @@ export async function createTerrain(src: string, levels: number, size: number) {
         }
     }
     console.timeEnd('indicies')
+
+    /*
+    position.push(width / 2, height / 2, -30);
+    for (let i = 0; i < width - 1; i ++) {
+        indices.push(
+            i,
+            width * height,
+            i + 1,
+            width * (height - 1) + i,
+            width * height,
+            width * (height - 1) + i + 1,
+        );
+    }
+    */
 
     console.time('normals')
     for (let i = 0; i < position.length / 3; i ++) {
