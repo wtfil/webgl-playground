@@ -19,6 +19,5 @@ export type Program = WebGLProgram & {
     },
     attributes: {
         [key: string]: number;
-    },
-    gl: WebGLRenderingContext;
+    }
 }
