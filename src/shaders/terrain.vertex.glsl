@@ -1,5 +1,4 @@
 attribute vec4 position;
-attribute vec4 color;
 attribute vec3 normal;
 attribute vec2 textureCoord;
 
@@ -9,7 +8,6 @@ uniform vec3 directionalLightVector;
 
 varying highp vec3 vLighting;
 varying lowp vec2 vTextureCoord;
-varying lowp vec4 vVertextColor;
 
 void main() {
   // light
@@ -25,9 +23,5 @@ void main() {
   // position
   gl_Position = projection * model * position;
 
-  // texture
   vTextureCoord = textureCoord;
-
-  // color; this is optional in fragment shader
-  vVertextColor = color;
 }

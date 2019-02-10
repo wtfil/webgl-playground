@@ -1,10 +1,12 @@
 import {vec3 as Vec3} from 'gl-matrix';
 
 export interface ProgramProperties {
-    rotation: number,
-    cameraPosition: Vec3,
-    center: Vec3,
-    directionalLightVector: Vec3
+    rotation: number;
+    cameraPosition: Vec3;
+    center: Vec3;
+    directionalLightVector: Vec3;
+    start: number;
+    time: number;
 }
 export interface BufferObject {
     buffers: {

@@ -2,10 +2,10 @@ export function createWater(width: number, height: number) {
     const w = width / 2;
     const h = height / 2;
     const position = [
-        -h, -w, 0,
-        -h, +w, 0,
-        +h, -w, 0,
-        +h, +w, 0
+        -w, -h, 0,
+        +w, -h, 0,
+        -w, +h, 0,
+        +w, +h, 0
     ];
     const indices = [
         0, 2, 1,
@@ -13,8 +13,8 @@ export function createWater(width: number, height: number) {
     ];
     const texture = [
         0, 0,
-        1, 0,
         0, 1,
+        1, 0,
         1, 1
     ];
 

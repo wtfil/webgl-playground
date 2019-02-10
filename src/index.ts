@@ -23,36 +23,17 @@ async function setup() {
     const terrainProgram = createProgram(
         gl,
         terrainVertextShaderSource,
-        terrainFragmentShaderSource,
-        [
-            'model',
-            'projection',
-            'directionalLightVector',
-            'texture'
-        ],
-        [
-            'position',
-            'color',
-            'normal',
-            'textureCoord'
-        ]
+        terrainFragmentShaderSource
     );
     const waterProgram = createProgram(
         gl,
         waterVertextShaderSource,
-        waterFragmentShaderSource,
-        [
-            'model',
-            'projection',
-        ],
-        [
-            'position',
-        ]
+        waterFragmentShaderSource
     );
     const terrainTexture = await loadTexture(gl, '/textures/yosemite.png');
     const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', terrainTexture);
-    const waterTexture = await loadTexture(gl, '/textures/water.png');
-    const water = createBuffers(gl, createWater(216, 216), waterTexture);
+    const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
+    const water = createBuffers(gl, createWater(216, 216), dudvTexture);
     // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
     // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
     // const texture = await loadTexture(gl, '/textures/texture2.png');
@@ -66,7 +47,9 @@ async function setup() {
         cameraPosition: Vec3.fromValues(0, 0, 300),
         center: Vec3.fromValues(0, 0, 0),
         rotation: 0,
-        directionalLightVector: Vec3.fromValues(0, 0, 1)
+        directionalLightVector: Vec3.fromValues(0, 0, 1),
+        start: Date.now(),
+        time: 0
     };
 
     const eventTarget = initControls(canvas);
@@ -87,6 +70,7 @@ async function setup() {
         Vec3.add(cameraPosition, cameraVector, center);
     })
     function render() {
+        properties.time = Date.now() - properties.start;
         drawScene({
             gl: gl!,
             terrainProgram: terrainProgram!,
@@ -99,7 +83,6 @@ async function setup() {
     }
     
     render();
-
 }
 
 async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
@@ -128,9 +111,9 @@ function createProgram(
     gl: WebGLRenderingContext,
     vertextShaderSource: string,
     fragmentShaderSource: string,
-    uniformNames: string[],
-    attributeNames: string[]
-): Program | null{
+    // uniformNames: string[],
+    // attributeNames: string[]
+): Program | null {
 
     const vertexShader = createShader(gl,  gl.VERTEX_SHADER, vertextShaderSource);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
@@ -151,14 +134,23 @@ function createProgram(
         console.warn(gl.getProgramInfoLog(program));
         return null;
     }
-    program.uniforms = uniformNames.reduce<Program['uniforms']>((acc, name) => {
-        acc[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
-        return acc;
-    }, {});
-    program.attributes = attributeNames.reduce<Program['attributes']>((acc, name) => {
-        acc[name] = gl.getAttribLocation(program, name);
-        return acc;
-    }, {});
+    const attributeRE = /^attribute.*\s(.+);$/;
+    const uniformRE = /^uniform.*\s(.+);$/;
+    program.attributes = {};
+    program.uniforms = {};
+
+    [vertextShaderSource, fragmentShaderSource].join('\n').split('\n').forEach(line => {
+        const am = line.trim().match(attributeRE);
+        const um = line.trim().match(uniformRE);
+        if (am) {
+            const name = am[1];
+            program.attributes[name] = gl.getAttribLocation(program, name);
+        }
+        if (um) {
+            const name = um[1];
+            program.uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
+        }
+    })
 
     return program;
 }
@@ -171,6 +163,7 @@ async function loadTexture(gl: WebGLRenderingContext, url: string) {
         image.onerror = reject;
     });
     const texture = gl.createTexture();
+    const isPow2 = (n: number) => (n & (n - 1)) === 0;
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(
@@ -184,7 +177,14 @@ async function loadTexture(gl: WebGLRenderingContext, url: string) {
         gl.TEXTURE_2D, 0, gl.RGBA,
         gl.RGBA, gl.UNSIGNED_BYTE, image
     );
-    gl.generateMipmap(gl.TEXTURE_2D);
+
+    if (isPow2(image.width) && isPow2(image.height)) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
 
     return texture as WebGLTexture;
 
@@ -265,6 +265,7 @@ function drawScene(props: {
     terrain: BufferObject,
     water: BufferObject
 }) {
+    
     const {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const {model, projection} = prepareScene(gl, properties);
 
@@ -272,13 +273,10 @@ function drawScene(props: {
     gl.useProgram(terrainProgram);
 
     bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
-    // bindBuffer(gl, terrain.buffers.color, program.attributes.aVertexColor, 4);
     bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
     bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
 
     gl.uniformMatrix4fv(
         terrainProgram.uniforms.projection,
@@ -291,6 +289,9 @@ function drawScene(props: {
         model
     );
     gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, new Float32Array(properties.directionalLightVector))
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
     gl.uniform1i(terrainProgram.uniforms.texture, 0);
 
     gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
@@ -298,6 +299,11 @@ function drawScene(props: {
     // Draw water
     gl.useProgram(waterProgram);
     Mat4.translate(model, model, [0, 0, 4]);
+    bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
+    bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
+
+    gl.uniform1f(waterProgram.uniforms.dudvOffset, properties.time / 30000);
     gl.uniformMatrix4fv(
         waterProgram.uniforms.projection,
         false,
@@ -308,12 +314,10 @@ function drawScene(props: {
         false,
         model
     );
-    //gl.activeTexture(gl.TEXTURE0);
-    //gl.bindTexture(gl.TEXTURE_2D, water.texture);
-    bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
-    // bindBuffer(gl, water.buffers.texture, program.attributes.textureCoord, 2);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
-    gl.drawElements(gl.TRIANGLES, water.size, gl.UNSIGNED_SHORT, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, water.texture);
+    gl.uniform1i(waterProgram.uniforms.texture, 0);
 
+    gl.drawElements(gl.TRIANGLES, water.size, gl.UNSIGNED_SHORT, 0);
 
 }
