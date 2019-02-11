@@ -13,9 +13,15 @@ export function createWater(width: number, height: number) {
     ];
     const texture = [
         0, 0,
+        1, 0,
+        0, 1,
+        1, 1
+        /*
+        0, 0,
         0, 1,
         1, 0,
         1, 1
+        */
     ];
 
     return {position, indices, texture};

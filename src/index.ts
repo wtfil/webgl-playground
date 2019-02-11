@@ -49,13 +49,18 @@ async function setup() {
         rotation: 0,
         directionalLightVector: Vec3.fromValues(0, 0, 1),
         start: Date.now(),
-        time: 0
+        time: 0,
+        renderWater: true
     };
 
     const eventTarget = initControls(canvas);
     eventTarget.addEventListener('change', e => {
-        const {detail: {rx, ry, rz, dx, dy, dz, dl}} = e as CustomEvent;
+        const {detail: {toggleRenderWater, rx, ry, rz, dx, dy, dz, dl}} = e as CustomEvent;
         const {center, cameraPosition, directionalLightVector} = properties;
+        if (toggleRenderWater) {
+            properties.renderWater = !properties.renderWater;
+            return;
+        }
         if (dl) {
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], 10 * dl);
         }
@@ -257,6 +262,35 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
     return {model, projection}
 }
 
+function createFramebufferTexture(gl: WebGLRenderingContext, width: number, height: number) {
+    const texture = gl.createTexture();
+    // const isPow2 = (n: number) => (n & (n - 1)) === 0;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D, 0, gl.RGBA,
+        1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+        new Uint8Array([0, 0, 255, 255])
+    );
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D, 0, gl.RGBA,
+        width, height, 0,
+        gl.RGBA, gl.UNSIGNED_BYTE, null
+    );
+
+    // if (isPow2(image.width) && isPow2(image.height)) {
+    //     gl.generateMipmap(gl.TEXTURE_2D);
+    // } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    // }
+
+    return texture as WebGLTexture;
+}
+
 function drawScene(props: {
     gl: WebGLRenderingContext,
     terrainProgram: Program,
@@ -268,42 +302,66 @@ function drawScene(props: {
     
     const {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const {model, projection} = prepareScene(gl, properties);
+    const waterHeight = 4;
 
+    const drawTerrain = (clipLevel: -1 | 1 | 0) => {
+        bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
+        bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
+        bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
+
+        gl.uniformMatrix4fv(
+            terrainProgram.uniforms.projection,
+            false,
+            projection
+        );
+        gl.uniformMatrix4fv(
+            terrainProgram.uniforms.model,
+            false,
+            model
+        );
+
+        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, new Float32Array(properties.directionalLightVector));
+        gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
+        gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
+        gl.uniform1i(terrainProgram.uniforms.texture, 0);
+
+        gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
+    }
     // Draw terrain
     gl.useProgram(terrainProgram);
+    drawTerrain(0);
 
-    bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
-    bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
-    bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
+    if (!properties.renderWater) {
+        return;
+    }
 
-
-    gl.uniformMatrix4fv(
-        terrainProgram.uniforms.projection,
-        false,
-        projection
-    );
-    gl.uniformMatrix4fv(
-        terrainProgram.uniforms.model,
-        false,
-        model
-    );
-    gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, new Float32Array(properties.directionalLightVector))
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
-    gl.uniform1i(terrainProgram.uniforms.texture, 0);
-
-    gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
+    // Refraction frame buffer
+    const fb = gl.createFramebuffer();
+    const width = gl.canvas.clientWidth;
+    const height = gl.canvas.clientHeight;
+    const refractionTexture = createFramebufferTexture(gl, width, height)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, refractionTexture, 0);
+    gl.viewport(0, 0, width, height);
+    // gl.clearColor(0.53, 0.8, 0.98, 1);
+    gl.clearColor(0, 0, 0, 1);
+    // gl.clearDepth(1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    drawTerrain(1);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     // Draw water
     gl.useProgram(waterProgram);
-    Mat4.translate(model, model, [0, 0, 4]);
+    Mat4.translate(model, model, [0, 0, waterHeight]);
     bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
     bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-    gl.uniform1f(waterProgram.uniforms.dudvOffset, properties.time / 30000);
+    gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 100000) % 0.1);
     gl.uniformMatrix4fv(
         waterProgram.uniforms.projection,
         false,
@@ -316,8 +374,15 @@ function drawScene(props: {
     );
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, water.texture);
-    gl.uniform1i(waterProgram.uniforms.texture, 0);
+    gl.uniform1i(waterProgram.uniforms.dudvTexture, 0);
 
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
+    gl.uniform1i(waterProgram.uniforms.refractionTexture, 0);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawElements(gl.TRIANGLES, water.size, gl.UNSIGNED_SHORT, 0);
+    gl.disable(gl.BLEND);
 
 }

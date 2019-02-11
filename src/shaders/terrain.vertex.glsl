@@ -5,9 +5,12 @@ attribute vec2 textureCoord;
 uniform mat4 model;
 uniform mat4 projection;
 uniform vec3 directionalLightVector;
+uniform float clipZ;
+uniform float clipLevel;
 
 varying highp vec3 vLighting;
 varying lowp vec2 vTextureCoord;
+varying float shouldClip;
 
 void main() {
   // light
@@ -24,4 +27,11 @@ void main() {
   gl_Position = projection * model * position;
 
   vTextureCoord = textureCoord;
+  if (clipLevel == 1.0) {
+    shouldClip = position.z > clipZ ? 1.0 : 0.0;
+  } else if (clipLevel == -1.0) {
+    shouldClip = position.z < clipZ ? 1.0 : 0.0;
+  } else {
+    shouldClip = 0.0;
+  }
 }

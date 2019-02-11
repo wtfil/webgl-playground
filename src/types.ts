@@ -7,6 +7,7 @@ export interface ProgramProperties {
     directionalLightVector: Vec3;
     start: number;
     time: number;
+    renderWater: boolean;
 }
 export interface BufferObject {
     buffers: {

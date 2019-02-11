@@ -19,6 +19,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     const heatmap = new Float32Array(width * height);
     let max = 0;
 
+    console.time('heatmap')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j ++) {
             let s = 0;
@@ -34,6 +35,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
             }
         }
     }
+    console.timeEnd('heatmap')
 
     const position = [];
     const indices = [];
@@ -41,6 +43,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     const normals = [];
     const texture = [];
 
+    console.time('position')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
@@ -66,7 +69,9 @@ export async function createTerrain(src: string, levels: number, size: number) {
             
         }
     }
+    console.timeEnd('position')
 
+    console.time('normal');
     for (let i = 0; i < position.length / 3; i ++) {
         const w = width;
         const h = height;
@@ -155,6 +160,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
 
         normals.push(n[0], n[1], n[2]);
     }
+    console.timeEnd('normal');
 
     return {
         position,
