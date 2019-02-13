@@ -56,12 +56,17 @@ export function initControls(canvas: HTMLElement) {
     pullKeys();
 
     window.addEventListener('keypress', e => {
-        if (e.key === 'r') {
-            onChange({toggleRenderWater: true})
-        } else {
-            pressed[e.key] = true;
+        switch (e.key) {
+            case 'r':
+                onChange({toggleRenderWater: true});
+                break;
+            case 't':
+                onChange({toggleRenderTerrain: true});
+                break;
+            default:
+                pressed[e.key] = true;
         }
-    })
+    });
     window.addEventListener('keyup', e => {
         pressed[e.key] = false;
     })

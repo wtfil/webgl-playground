@@ -8,6 +8,7 @@ export interface ProgramProperties {
     start: number;
     time: number;
     renderWater: boolean;
+    renderTerrain: boolean;
 }
 export interface BufferObject {
     buffers: {
