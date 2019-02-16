@@ -5,9 +5,11 @@ uniform mat4 model;
 uniform mat4 projection;
 
 varying lowp vec2 vTextureCoord;
+varying lowp vec4 clipSpace;
 
 void main() {
-  gl_Position = projection * model * position;
+  clipSpace = projection * model * position;
+  gl_Position = clipSpace;
 
   vTextureCoord = textureCoord;
 }

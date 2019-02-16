@@ -23,7 +23,6 @@ void main() {
   highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
   vLighting = ambientLight + (directionalLightColor * directional);
 
-  // position
   gl_Position = projection * model * position;
 
   vTextureCoord = textureCoord;

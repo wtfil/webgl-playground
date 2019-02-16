@@ -10,10 +10,13 @@ import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
+const CANVAS_WIDTH = 512;
+const CANVAS_HEIGHT = 512;
+
 async function setup() {
     const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
     const gl = canvas.getContext('experimental-webgl');
     if (!gl) {
         return;
@@ -33,7 +36,7 @@ async function setup() {
     const terrainTexture = await loadTexture(gl, '/textures/yosemite.png');
     const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', terrainTexture);
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
-    const water = createBuffers(gl, createWater(216, 216), dudvTexture);
+    const water = createBuffers(gl, createWater(CANVAS_WIDTH, CANVAS_HEIGHT), dudvTexture);
     // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
     // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
     // const texture = await loadTexture(gl, '/textures/texture2.png');
@@ -44,8 +47,8 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        cameraPosition: Vec3.fromValues(0, 20, 300),
-        center: Vec3.fromValues(0, 20, 0),
+        cameraPosition: Vec3.fromValues(0, 0, 200),
+        center: Vec3.fromValues(0, 0, 0),
         rotation: 0,
         directionalLightVector: Vec3.fromValues(0, 0, 1),
         start: Date.now(),
@@ -69,7 +72,7 @@ async function setup() {
         if (dl) {
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], 10 * dl);
         }
-        Vec3.add(center, center, [dx, dy, dz]);
+        // Vec3.add(center, center, [dx, dy, dz]);
         Vec3.add(cameraPosition, cameraPosition, [dx, dy, dz]);
 
         const cameraVector = Vec3.create();
@@ -258,19 +261,19 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const fovy = 45 * Math.PI / 180;
-    const ratio = width / height;
-    Mat4.perspective(projection, fovy, ratio, 0.1, 1000.0);
+    Mat4.perspective(projection, 45 * Math.PI / 180, width / height, 0.1, 1000.0);
 
     Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
 
     return {model, projection}
 }
 
-function createFramebufferTexture(gl: WebGLRenderingContext, width: number, height: number) {
-    const texture = gl.createTexture();
+function createRefraction(gl: WebGLRenderingContext, width: number, height: number) {
+    const refractionTexture = gl.createTexture() as WebGLTexture;
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.RGBA,
         width, height, 0,
@@ -280,9 +283,20 @@ function createFramebufferTexture(gl: WebGLRenderingContext, width: number, heig
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    return texture as WebGLTexture;
+    gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        refractionTexture,
+        0
+    );
+
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    return {refractionTexture, framebuffer};
 }
 
 function drawScene(props: {
@@ -294,12 +308,11 @@ function drawScene(props: {
     water: BufferObject
 }) {
     
-    const {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
-    const {model, projection} = prepareScene(gl, properties);
+    let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const waterHeight = 4;
+    const {model, projection} = prepareScene(gl, properties);
     let refractionTexture: WebGLTexture;
 
-    // console.log({properties, projection, model})
     const renderTerrain = (clipLevel: -1 | 1 | 0) => {
         gl.useProgram(terrainProgram);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
@@ -329,15 +342,20 @@ function drawScene(props: {
         gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
     }
 
-    const setRefractTexture = () => {
-        const fb = gl.createFramebuffer();
-        const width = gl.canvas.clientWidth;
-        const height = gl.canvas.clientHeight;
-        // const width = 512;
-        // const height = 512;
-        refractionTexture = createFramebufferTexture(gl, width, height)
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, refractionTexture, 0);
+    const getRefractTexture = () => {
+        // const width = CANVAS_WIDTH;
+        // const height = CANVAS_HEIGHT;
+        const width = 216;
+        const height = 216;
+        // const distance = Vec3.distance(properties.center, properties.cameraPosition);
+        // const originalFovy = 45 / 180 * Math.PI
+        // const fovy = Math.atan(width / 2 / distance) * 2;
+
+        // Mat4.perspective(projection, fovy, width / height, 0.1, 1000.0);
+        const {framebuffer, refractionTexture} = createRefraction(gl, width, height);
+        water = createBuffers(gl, createWater(width, height), water.texture);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
         // gl.clearColor(0.53, 0.8, 0.98, 1);
         gl.clearColor(0, 0, 0, 1);
@@ -345,6 +363,10 @@ function drawScene(props: {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // Mat4.perspective(projection, originalFovy, width / height, 0.1, 1000.0);
+
+        return refractionTexture;
     }
 
     const renderWater = () => {
@@ -354,7 +376,7 @@ function drawScene(props: {
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 100000) % 0.1);
+        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) % 1);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
@@ -380,8 +402,9 @@ function drawScene(props: {
     }
 
     if (properties.renderWater) {
-        setRefractTexture();
+        refractionTexture = getRefractTexture();
     }
+    gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     
     if (properties.renderTerrain) {
         renderTerrain(0);
