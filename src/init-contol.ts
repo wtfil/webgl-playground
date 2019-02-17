@@ -1,67 +1,49 @@
-export function initControls(canvas: HTMLElement) {
-    const ee = new EventTarget();
-    const s = 400 / Math.hypot(canvas.clientHeight, canvas.clientWidth);
+import {EventEmitter} from 'events';
+
+export function initControls() {
+    const ee = new EventEmitter();
     const pressed: {[key: string]: boolean} = {};
-    const onChange = (detail: any) => {
-        ee.dispatchEvent(new CustomEvent('change', {detail}))
-    }
     const pullKeys = () => {
-        let dx = 0;
-        let dy = 0;
-        let dz = 0;
-        let rx = 0;
-        let ry = 0;
-        let rz = 0;
-        let dl = 0;
+        const s = 0.01;
+        let pitch = 0;
+        let yaw = 0;
+
 
         if (pressed.w) {
-            dy = s;
+            pitch = s;
         } else if (pressed.s) {
-            dy = -s;
-        }
-
-        if (pressed.e) {
-            dz = s
-        } else if (pressed.q) {
-            dz = -s
+            pitch = -s;
         }
 
         if (pressed.a) {
-            dx = -s;
+            yaw = -s;
         } else if (pressed.d) {
-            dx = s;
+            yaw = s;
         }
 
-        if (pressed.j) {
-            ry = -s * 3;
-        } else if (pressed.k) {
-            ry = s * 3;
-        }
-        if (pressed.h) {
-            rx = -s * 3;
-        } else if (pressed.l) {
-            rx = s * 3;
-        }
-        if (pressed['[']) {
-            dl = s / 400;
-        } else if (pressed[']']) {
-            dl = -s / 400;
+        if (pitch || yaw) {
+            ee.emit('move', {pitch, yaw});
         }
 
-        if (dx || dy || dz || rx || ry || rz || dl) {
-            onChange({dx, dy, dz, rx, ry, rz, dl})
-        }
         requestAnimationFrame(pullKeys);
     }
     pullKeys();
 
+    window.addEventListener('wheel', e => {
+        const {deltaY: dy} = e;
+        if (dy) {
+            ee.emit('zoom', {
+                dy: dy / Math.abs(dy) * 10
+            });
+        }
+    })
     window.addEventListener('keypress', e => {
         switch (e.key) {
             case 'r':
-                onChange({toggleRenderWater: true});
+                ee.emit('toggleRenderWater');
                 break;
             case 't':
-                onChange({toggleRenderTerrain: true});
+                ee.emit('toggleRenderTerrain');
                 break;
             default:
                 pressed[e.key] = true;

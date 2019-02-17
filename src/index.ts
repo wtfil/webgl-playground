@@ -37,19 +37,15 @@ async function setup() {
     const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', terrainTexture);
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
     const water = createBuffers(gl, createWater(CANVAS_WIDTH, CANVAS_HEIGHT), dudvTexture);
-    // const texture = await loadTexture(gl, '/textures/sognefjorden2.png');
-    // const terrain = await initTerrain(gl, '/heatmaps/sognefjorden.png', texture);
-    // const texture = await loadTexture(gl, '/textures/texture2.png');
-    // const terrain = await initTerrain(gl, '/heatmaps/1.jpg', texture);
-    // const cube = createBuffers(gl, createCube(), texture);
     if (!water || !waterProgram || !terrainProgram || !terrain) {
         return;
     }
 
     const properties: ProgramProperties = {
-        cameraPosition: Vec3.fromValues(0, 0, 200),
+        cameraDistance: 200,
+        yaw: 0,
+        pitch: 0,
         center: Vec3.fromValues(0, 0, 0),
-        rotation: 0,
         directionalLightVector: Vec3.fromValues(0, 0, 1),
         start: Date.now(),
         time: 0,
@@ -57,31 +53,22 @@ async function setup() {
         renderTerrain: true
     };
 
-    const eventTarget = initControls(canvas);
-    eventTarget.addEventListener('change', e => {
-        const {detail: {toggleRenderTerrain, toggleRenderWater, rx, ry, rz, dx, dy, dz, dl}} = e as CustomEvent;
-        const {center, cameraPosition, directionalLightVector} = properties;
-        if (toggleRenderWater) {
-            properties.renderWater = !properties.renderWater;
-            return;
-        }
-        if (toggleRenderTerrain) {
-            properties.renderTerrain = !properties.renderTerrain;
-            return;
-        }
-        if (dl) {
-            Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], 10 * dl);
-        }
-        // Vec3.add(center, center, [dx, dy, dz]);
-        Vec3.add(cameraPosition, cameraPosition, [dx, dy, dz]);
+    const emitter = initControls();
 
-        const cameraVector = Vec3.create();
-        Vec3.negate(cameraVector, center);
-        Vec3.add(cameraVector, cameraVector, cameraPosition);
-        Vec3.rotateX(cameraVector, cameraVector, [0, 0, 0], rx / 30)
-        Vec3.rotateY(cameraVector, cameraVector, [0, 0, 0], ry / 100)
-        Vec3.add(cameraPosition, cameraVector, center);
-    })
+    emitter
+        .on('toggleRenderWater', () => {
+            properties.renderWater = !properties.renderWater;
+        })
+        .on('toggleRenderTerrain', () => {
+            properties.renderTerrain = !properties.renderTerrain;
+        })
+        .on('zoom', e => {
+            properties.cameraDistance += e.dy;
+        })
+        .on('move', e => {
+            properties.yaw += e.yaw;
+            properties.pitch += e.pitch;
+        });
     function render() {
         properties.time = Date.now() - properties.start;
         drawScene({
@@ -96,6 +83,19 @@ async function setup() {
     }
     
     render();
+}
+
+const getCameraPosition = (properties: ProgramProperties): Vec3 => {
+    const {sin, cos} = Math;
+    const {center, cameraDistance, yaw, pitch} = properties;
+    const cameraPosition = Vec3.fromValues(
+        cos(yaw) * sin(pitch),
+        sin(yaw) * sin(pitch),
+        cos(pitch)
+    );
+    Vec3.scale(cameraPosition, cameraPosition, cameraDistance);
+    Vec3.add(cameraPosition, cameraPosition, center);
+    return cameraPosition;
 }
 
 async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
@@ -263,7 +263,7 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
 
     Mat4.perspective(projection, 45 * Math.PI / 180, width / height, 0.1, 1000.0);
 
-    Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
+    Mat4.lookAt(model, getCameraPosition(properties), properties.center, [0, 1, 0]);
 
     return {model, projection}
 }
@@ -358,7 +358,7 @@ function drawScene(props: {
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
         // gl.clearColor(0.53, 0.8, 0.98, 1);
-        gl.clearColor(0, 0, 0, 1);
+        gl.clearColor(0, 0, 0, 0);
         // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
@@ -376,7 +376,7 @@ function drawScene(props: {
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) % 1);
+        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) * 0);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,

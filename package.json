@@ -12,7 +12,9 @@
     "webpack-dev-server": "^3.1.14"
   },
   "dependencies": {
+    "@types/events": "^3.0.0",
     "@types/gl-matrix": "^2.4.4",
+    "events": "^3.0.0",
     "gl-matrix": "^3.0.0",
     "typescript": "^3.2.2"
   }
