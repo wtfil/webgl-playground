@@ -33,16 +33,20 @@ async function setup() {
         waterVertextShaderSource,
         waterFragmentShaderSource
     );
+
     const terrainTexture = await loadTexture(gl, '/textures/yosemite.png');
-    const terrain = await initTerrain(gl, '/heatmaps/yosemite.png', terrainTexture);
+    const terrainData = await createTerrain('/heatmaps/yosemite.png', 30, 5);
+    const terrain = terrainData && createBuffers(gl, terrainData, terrainTexture);
+
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
     const water = createBuffers(gl, createWater(CANVAS_WIDTH, CANVAS_HEIGHT), dudvTexture);
+
     if (!water || !waterProgram || !terrainProgram || !terrain) {
         return;
     }
 
     const properties: ProgramProperties = {
-        cameraDistance: 200,
+        cameraDistance: 300,
         yaw: 0,
         pitch: 0,
         center: Vec3.fromValues(0, 0, 0),
@@ -68,7 +72,11 @@ async function setup() {
         .on('move', e => {
             properties.yaw += e.yaw;
             properties.pitch += e.pitch;
-        });
+        })
+        .on('changeLight', e => {
+            const {directionalLightVector} = properties;
+            Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], e.dl);
+        })
     function render() {
         properties.time = Date.now() - properties.start;
         drawScene({
@@ -96,11 +104,6 @@ const getCameraPosition = (properties: ProgramProperties): Vec3 => {
     Vec3.scale(cameraPosition, cameraPosition, cameraDistance);
     Vec3.add(cameraPosition, cameraPosition, center);
     return cameraPosition;
-}
-
-async function initTerrain(gl: WebGLRenderingContext, heatmapSrc: string, texture: WebGLTexture) {
-    const terrain = await createTerrain(heatmapSrc, 30, 5);
-    return terrain && createBuffers(gl, terrain, texture);
 }
 
 function createShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -345,26 +348,18 @@ function drawScene(props: {
     const getRefractTexture = () => {
         // const width = CANVAS_WIDTH;
         // const height = CANVAS_HEIGHT;
-        const width = 216;
-        const height = 216;
-        // const distance = Vec3.distance(properties.center, properties.cameraPosition);
-        // const originalFovy = 45 / 180 * Math.PI
-        // const fovy = Math.atan(width / 2 / distance) * 2;
-
-        // Mat4.perspective(projection, fovy, width / height, 0.1, 1000.0);
+        const width = 512;
+        const height = 512;
         const {framebuffer, refractionTexture} = createRefraction(gl, width, height);
         water = createBuffers(gl, createWater(width, height), water.texture);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        // gl.clearColor(0.53, 0.8, 0.98, 1);
-        gl.clearColor(0, 0, 0, 0);
-        // gl.clearDepth(1.0);
+        // gl.clearColor(0, 0, 0, 0);
+        gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // Mat4.perspective(projection, originalFovy, width / height, 0.1, 1000.0);
 
         return refractionTexture;
     }
@@ -376,7 +371,7 @@ function drawScene(props: {
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) * 0);
+        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) % 0.3);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,

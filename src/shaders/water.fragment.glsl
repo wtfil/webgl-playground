@@ -1,5 +1,5 @@
-varying lowp vec2 vTextureCoord;
-varying lowp vec4 clipSpace;
+varying highp vec2 vTextureCoord;
+varying highp vec4 clipSpace;
 
 uniform sampler2D dudvTexture;
 uniform sampler2D refractionTexture;
@@ -14,16 +14,15 @@ void main() {
 
   lowp vec2 totalDistortion = (texture2D(dudvTexture, distortedTexCoords).xy * 2.0 - 1.0) * 0.03;
 
-  //lowp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
-  lowp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.529;
-  lowp vec2 refractTexCoords = vec2(ndc.x, ndc.y);
+  highp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
+  highp vec2 refractTexCoords = vec2(ndc.x, ndc.y);
 
   refractTexCoords += totalDistortion;
 
-  // refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);
+  refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);
 
 
   lowp vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
-  // gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
-  gl_FragColor = refractColor;
+  gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
+  // gl_FragColor = refractColor;
 }

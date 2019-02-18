@@ -7,6 +7,7 @@ export function initControls() {
         const s = 0.01;
         let pitch = 0;
         let yaw = 0;
+        let dl = 0;
 
 
         if (pressed.w) {
@@ -20,9 +21,18 @@ export function initControls() {
         } else if (pressed.d) {
             yaw = s;
         }
+        if (pressed['[']) {
+            dl = -s;
+        } else if (pressed[']']) {
+            dl = s;
+        }
 
         if (pitch || yaw) {
             ee.emit('move', {pitch, yaw});
+        }
+
+        if (dl) {
+            ee.emit('changeLight', {dl});
         }
 
         requestAnimationFrame(pullKeys);
