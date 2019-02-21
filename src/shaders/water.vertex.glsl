@@ -8,8 +8,8 @@ varying highp vec2 vTextureCoord;
 varying highp vec4 clipSpace;
 
 void main() {
-  clipSpace = projection * model * position;
-  gl_Position = clipSpace;
+    clipSpace = projection * model * position;
+    gl_Position = clipSpace;
 
-  vTextureCoord = textureCoord;
+    vTextureCoord = textureCoord;
 }

@@ -16,7 +16,9 @@ export interface BufferObject {
         [key: string]: WebGLBuffer;
     },
     size: number;
-    texture: WebGLTexture;
+    textures: {
+        [key: string]: WebGLTexture
+    }
 }
 export type Program = WebGLProgram & {
     uniforms: {

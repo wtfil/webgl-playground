@@ -36,10 +36,11 @@ async function setup() {
 
     const terrainTexture = await loadTexture(gl, '/textures/yosemite.png');
     const terrainData = await createTerrain('/heatmaps/yosemite.png', 30, 5);
-    const terrain = terrainData && createBuffers(gl, terrainData, terrainTexture);
+    const terrain = terrainData && createBuffers(gl, terrainData, {surface: terrainTexture});
 
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
-    const water = createBuffers(gl, createWater(CANVAS_WIDTH, CANVAS_HEIGHT), dudvTexture);
+    const normalMapTexture = await loadTexture(gl, '/textures/normalmap.png');
+    const water = createBuffers(gl, createWater(), {dudv: dudvTexture, normalMap: normalMapTexture});
 
     if (!water || !waterProgram || !terrainProgram || !terrain) {
         return;
@@ -127,8 +128,6 @@ function createProgram(
     gl: WebGLRenderingContext,
     vertextShaderSource: string,
     fragmentShaderSource: string,
-    // uniformNames: string[],
-    // attributeNames: string[]
 ): Program | null {
 
     const vertexShader = createShader(gl,  gl.VERTEX_SHADER, vertextShaderSource);
@@ -211,7 +210,7 @@ function createBuffers(
     arrays: {
         [key: string]: number[]
     },
-    texture: WebGLTexture
+    textures: BufferObject['textures']
 ): BufferObject {
     return {
         buffers: {
@@ -221,7 +220,7 @@ function createBuffers(
             normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.normals)),
             texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
         },
-        texture,
+        textures,
         size: arrays.indices.length
     }
 }
@@ -339,23 +338,19 @@ function drawScene(props: {
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, terrain.texture);
+        gl.bindTexture(gl.TEXTURE_2D, terrain.textures.surface);
         gl.uniform1i(terrainProgram.uniforms.texture, 0);
 
         gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
     }
 
     const getRefractTexture = () => {
-        // const width = CANVAS_WIDTH;
-        // const height = CANVAS_HEIGHT;
         const width = 512;
         const height = 512;
         const {framebuffer, refractionTexture} = createRefraction(gl, width, height);
-        water = createBuffers(gl, createWater(width, height), water.texture);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        // gl.clearColor(0, 0, 0, 0);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
@@ -371,20 +366,28 @@ function drawScene(props: {
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 / 20) % 0.3);
+        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.006));
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
             projection
         );
+
+        Mat4.scale(model, model, [512, 512, 512]);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.model,
             false,
             model
         );
+        Mat4.scale(model, model, [1 / 512, 1 / 512, 1 / 512]);
+
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, water.texture);
+        gl.bindTexture(gl.TEXTURE_2D, water.textures.dudv);
         gl.uniform1i(waterProgram.uniforms.dudvTexture, 0);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, water.textures.normalMap);
+        gl.uniform1i(waterProgram.uniforms.normalMapTexture, 0);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
