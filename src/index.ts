@@ -270,12 +270,12 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
     return {model, projection}
 }
 
-function createRefraction(gl: WebGLRenderingContext, width: number, height: number) {
-    const refractionTexture = gl.createTexture() as WebGLTexture;
+function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
+    const texture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
-    gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.RGBA,
         width, height, 0,
@@ -291,14 +291,14 @@ function createRefraction(gl: WebGLRenderingContext, width: number, height: numb
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        refractionTexture,
+        texture,
         0
     );
 
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    return {refractionTexture, framebuffer};
+    return {texture, framebuffer};
 }
 
 function drawScene(props: {
@@ -315,6 +315,7 @@ function drawScene(props: {
     const {model, projection} = prepareScene(gl, properties);
     const cameraPosition = getCameraPosition(properties);
     let refractionTexture: WebGLTexture;
+    let reflectionTexture: WebGLTexture;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0) => {
         gl.useProgram(terrainProgram);
@@ -348,7 +349,7 @@ function drawScene(props: {
     const getRefractTexture = () => {
         const width = 512;
         const height = 512;
-        const {framebuffer, refractionTexture} = createRefraction(gl, width, height);
+        const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
@@ -357,7 +358,21 @@ function drawScene(props: {
         renderTerrain(1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        return refractionTexture;
+        return texture;
+    }
+    const getReflectionTexture = () => {
+        const width = 512;
+        const height = 512;
+        const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.viewport(0, 0, width, height);
+        gl.clearDepth(1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        renderTerrain(-1);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return texture;
     }
 
     const renderWater = () => {
@@ -395,6 +410,10 @@ function drawScene(props: {
         gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
         gl.uniform1i(waterProgram.uniforms.refractionTexture, 0);
 
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
+        gl.uniform1i(waterProgram.uniforms.reflectionTexture, 0);
+
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, water.size, gl.UNSIGNED_SHORT, 0);
@@ -403,6 +422,7 @@ function drawScene(props: {
 
     if (properties.renderWater) {
         refractionTexture = getRefractTexture();
+        reflectionTexture = getReflectionTexture();
     }
     gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     
