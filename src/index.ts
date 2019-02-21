@@ -313,6 +313,7 @@ function drawScene(props: {
     let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const waterHeight = 4;
     const {model, projection} = prepareScene(gl, properties);
+    const cameraPosition = getCameraPosition(properties);
     let refractionTexture: WebGLTexture;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0) => {
@@ -367,6 +368,7 @@ function drawScene(props: {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
         gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.006));
+        gl.uniform3fv(waterProgram.uniforms.cameraPosition, cameraPosition);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
