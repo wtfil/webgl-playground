@@ -9,10 +9,12 @@ varying highp vec2 vTextureCoord;
 varying highp vec4 clipSpace;
 varying highp vec3 fromFragmentToCamera;
 
+const lowp float tiling = 10.0;
+
 void main() {
     clipSpace = projection * model * position;
     gl_Position = clipSpace;
 
-    vTextureCoord = textureCoord;
     fromFragmentToCamera = cameraPosition - (model * position).xyz;
+    vTextureCoord = textureCoord * tiling;
 }

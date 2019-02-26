@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2018",
     "module": "commonjs",
     "lib": ["dom", "es2015", "es2017"],
     "baseUrl": ".",
@@ -12,7 +12,8 @@
     "strictPropertyInitialization": false,
     "inlineSources": true,
     "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
   }
 }

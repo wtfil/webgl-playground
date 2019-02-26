@@ -19,6 +19,7 @@ async function setup() {
     canvas.height = CANVAS_HEIGHT;
     const gl = canvas.getContext('experimental-webgl');
     if (!gl) {
+        console.warn('Can not create webgl context')
         return;
     }
     document.body.appendChild(canvas);
@@ -353,6 +354,7 @@ function drawScene(props: {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
+        gl.clearColor(0, 0, 0, 0);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
@@ -367,6 +369,7 @@ function drawScene(props: {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
+        gl.clearColor(0, 0, 0, 0);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1);
@@ -382,7 +385,7 @@ function drawScene(props: {
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.006));
+        gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.06) % 1);
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, cameraPosition);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
@@ -402,17 +405,17 @@ function drawScene(props: {
         gl.bindTexture(gl.TEXTURE_2D, water.textures.dudv);
         gl.uniform1i(waterProgram.uniforms.dudvTexture, 0);
 
-        gl.activeTexture(gl.TEXTURE0);
+        gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, water.textures.normalMap);
-        gl.uniform1i(waterProgram.uniforms.normalMapTexture, 0);
+        gl.uniform1i(waterProgram.uniforms.normalMapTexture, 1);
 
-        gl.activeTexture(gl.TEXTURE0);
+        gl.activeTexture(gl.TEXTURE2);
         gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
-        gl.uniform1i(waterProgram.uniforms.refractionTexture, 0);
+        gl.uniform1i(waterProgram.uniforms.refractionTexture, 2);
 
-        gl.activeTexture(gl.TEXTURE0);
+        gl.activeTexture(gl.TEXTURE3);
         gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
-        gl.uniform1i(waterProgram.uniforms.reflectionTexture, 0);
+        gl.uniform1i(waterProgram.uniforms.reflectionTexture, 3);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
