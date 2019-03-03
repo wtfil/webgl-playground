@@ -1,6 +1,6 @@
 attribute vec4 position;
 attribute vec3 normal;
-attribute vec2 textureCoord;
+attribute vec4 colors;
 
 uniform mat4 model;
 uniform mat4 projection;
@@ -10,6 +10,7 @@ uniform float clipLevel;
 
 varying highp vec3 vLighting;
 varying lowp vec2 vTextureCoord;
+varying lowp vec4 fragmentColor;
 varying float shouldClip;
 
 void main() {
@@ -25,7 +26,7 @@ void main() {
 
   gl_Position = projection * model * position;
 
-  vTextureCoord = textureCoord;
+  fragmentColor = colors;
   if (clipLevel == 1.0) {
     shouldClip = position.z >= clipZ ? 1.0 : 0.0;
   } else if (clipLevel == -1.0) {

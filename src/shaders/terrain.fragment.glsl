@@ -1,13 +1,17 @@
 varying highp vec3 vLighting;
-varying lowp vec2 vTextureCoord;
 varying lowp float shouldClip;
+varying lowp vec4 fragmentColor;
 
-uniform sampler2D texture;
+const lowp vec4 grassColor = vec4(0.12, 0.43, 0.02, 1.0);
+const lowp vec4 snowColor = vec4(0.73, 0.91, 0.92, 1.0);
+const lowp vec4 groundColor = vec4(0.85, 0.84, 0.79, 1.00);
 
 void main() {
   if (shouldClip == 1.0) {
     discard;
   }
-  highp vec4 color = texture2D(texture, vTextureCoord);
-  gl_FragColor = vec4(color.rgb * vLighting, color.a);
+  lowp float grassSnowMixFactor = pow(fragmentColor.r, 3.0);
+  lowp float groundGrassMixFactor = 1.0 - pow(fragmentColor.r, 0.3);
+  gl_FragColor = mix(grassColor, snowColor, grassSnowMixFactor);
+  gl_FragColor = mix(gl_FragColor, groundColor, groundGrassMixFactor);
 }

@@ -1,6 +1,6 @@
 import {vec3 as Vec3} from "gl-matrix";
 
-export async function createTerrain(src: string, levels: number, size: number) {
+export async function createTerrain(src: string, maxHeight: number, size: number) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
     canvas.width = image.width;
@@ -12,7 +12,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     ctx.drawImage(image, 0, 0);
     const {data} = ctx.getImageData(0, 0, image.width, image.height);
     const u32 = new Uint32Array(data)
-    const levelHeight = 256 / levels;
+    const levelHeight = 256 / maxHeight;
 
     const width = Math.floor(image.width / size);
     const height = Math.floor(image.height / size);
@@ -28,7 +28,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
                     s += u32[(i * size * image.width + j * size + k * size + l) * 4]
                 }
             }
-            const v = Math.floor(s / size / size / levelHeight);
+            const v = s / size / size / levelHeight;
             heatmap[i * width + j] = v;
             if (max < v) {
                 max = v;
@@ -47,7 +47,7 @@ export async function createTerrain(src: string, levels: number, size: number) {
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
-            const c = (1 + heatmap[k]) / (1 + max);
+            const c = heatmap[k] / max;
             position.push(
                 i - height / 2,
                 j - width / 2,

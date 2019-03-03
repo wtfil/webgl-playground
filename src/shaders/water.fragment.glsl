@@ -27,7 +27,7 @@ void main() {
     // base refract/reflect texture coordinates
     lowp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
     lowp vec2 refractTexCoords = vec2(ndc.x, +ndc.y);
-    lowp vec2 reflectTexCoords = vec2(ndc.x, -ndc.y);
+    lowp vec2 reflectTexCoords = vec2(ndc.x, +ndc.y);
 
     // refractive factor
     lowp vec3 toCamera = normalize(fromFragmentToCamera);
@@ -58,10 +58,11 @@ void main() {
     lowp vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
     lowp vec4 reflectColor = texture2D(reflectionTexture, reflectTexCoords);
 
-    gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
+    // gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
 
     // gl_FragColor = mix(reflectColor, refractColor, refractiveFactor);
-    // gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.2);
+    gl_FragColor = mix(reflectColor, refractColor, 1.0);
+    gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.1);
 
     // gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.5) + vec4(specularHighlights, 0.0);
 }
