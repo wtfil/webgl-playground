@@ -2,9 +2,7 @@ import {vec3 as Vec3} from 'gl-matrix';
 
 export interface ProgramProperties {
     center: Vec3;
-    cameraDistance: number,
-    yaw: number,
-    pitch: number,
+    cameraPosition: Vec3,
     directionalLightVector: Vec3;
     start: number;
     time: number;

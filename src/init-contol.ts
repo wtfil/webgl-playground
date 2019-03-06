@@ -5,30 +5,29 @@ export function initControls() {
     const pressed: {[key: string]: boolean} = {};
     const pullKeys = () => {
         const s = 0.01;
-        let pitch = 0;
-        let yaw = 0;
         let dl = 0;
+        let dx = 0;
+        let dy = 0;
 
-
-        if (pressed.w) {
-            pitch = s;
-        } else if (pressed.s) {
-            pitch = -s;
-        }
-
-        if (pressed.a) {
-            yaw = -s;
-        } else if (pressed.d) {
-            yaw = s;
-        }
         if (pressed['[']) {
             dl = -s;
         } else if (pressed[']']) {
             dl = s;
         }
+        if (pressed.w) {
+            dy = 1;
+        } else if (pressed.s) {
+            dy = -1
+        }
 
-        if (pitch || yaw) {
-            ee.emit('move', {pitch, yaw});
+        if (pressed.a) {
+            dx = -1;
+        } else if (pressed.d) {
+            dx = 1;
+        }
+
+        if (dx || dy) {
+            ee.emit('move', { dx, dy });
         }
 
         if (dl) {

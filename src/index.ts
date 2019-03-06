@@ -47,14 +47,13 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        cameraDistance: 300,
-        yaw: 0,
-        pitch: 0,
         center: Vec3.fromValues(0, 0, 0),
+        cameraPosition: Vec3.fromValues(0, 0, 200),
+
         directionalLightVector: Vec3.fromValues(0, 0, 1),
         start: Date.now(),
         time: 0,
-        renderWater: false,
+        renderWater: true,
         renderTerrain: true
     };
 
@@ -68,11 +67,22 @@ async function setup() {
             properties.renderTerrain = !properties.renderTerrain;
         })
         .on('zoom', e => {
-            properties.cameraDistance += e.dy;
+            const {cameraPosition, center} = properties;
+            const eye = Vec3.create();
+            const distance = Vec3.distance(center, cameraPosition);
+            const nextDistance = distance + e.dy;
+            if (nextDistance <= 50 || nextDistance >= 300) {
+                return;
+            }
+            Vec3.sub(eye, cameraPosition, center);
+            Vec3.scale(eye, eye, nextDistance / distance);
+            Vec3.add(cameraPosition, center, eye);
         })
         .on('move', e => {
-            properties.yaw += e.yaw;
-            properties.pitch += e.pitch;
+            const move = Vec3.fromValues(e.dx, e.dy, 0);
+            const {cameraPosition, center} = properties;
+            Vec3.add(cameraPosition, cameraPosition, move);
+            Vec3.add(center, center, move);
         })
         .on('changeLight', e => {
             const {directionalLightVector} = properties;
@@ -92,19 +102,6 @@ async function setup() {
     }
     
     render();
-}
-
-const getCameraPosition = (properties: ProgramProperties): Vec3 => {
-    const {sin, cos} = Math;
-    const {center, cameraDistance, yaw, pitch} = properties;
-    const cameraPosition = Vec3.fromValues(
-        cos(yaw) * sin(pitch),
-        sin(yaw) * sin(pitch),
-        cos(pitch)
-    );
-    Vec3.scale(cameraPosition, cameraPosition, cameraDistance);
-    Vec3.add(cameraPosition, cameraPosition, center);
-    return cameraPosition;
 }
 
 function createShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -266,7 +263,7 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
 
     Mat4.perspective(projection, 45 * Math.PI / 180, width / height, 0.1, 1000.0);
 
-    Mat4.lookAt(model, getCameraPosition(properties), properties.center, [0, 1, 0]);
+    Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
 
     return {model, projection}
 }
@@ -312,9 +309,8 @@ function drawScene(props: {
 }) {
     
     let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
-    const waterHeight = 4;
+    const waterHeight = 10;
     const {model, projection} = prepareScene(gl, properties);
-    const cameraPosition = getCameraPosition(properties);
     let refractionTexture: WebGLTexture;
     let reflectionTexture: WebGLTexture;
 
@@ -387,7 +383,7 @@ function drawScene(props: {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
         gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.06) % 1);
-        gl.uniform3fv(waterProgram.uniforms.cameraPosition, cameraPosition);
+        gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
