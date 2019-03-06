@@ -7,6 +7,8 @@ uniform sampler2D normalMapTexture;
 uniform sampler2D refractionTexture;
 uniform sampler2D reflectionTexture;
 uniform lowp float dudvOffset;
+uniform int useRefraction;
+uniform int useReflection;
 
 const lowp float waterDistortionStrenth = 0.03;
 const lowp float fresnelStrength = 1.5;
@@ -49,10 +51,10 @@ void main() {
     // reflectTexCoords.y = clamp(reflectTexCoords.y, -0.999, -0.001);
 
     // lighs
-    // lowp vec3 reflectedLight = reflect(normalize(sunlightDir), normal);
-    // lowp float specular = max(dot(reflectedLight, toCamera), 0.0);
-    // specular = pow(specular, shineDamper);
-    // lowp vec3 specularHighlights = sunlightColor * specular * waterReflectivity;
+    lowp vec3 reflectedLight = reflect(normalize(sunlightDir), normal);
+    lowp float specular = max(dot(reflectedLight, toCamera), 0.0);
+    specular = pow(specular, shineDamper);
+    lowp vec3 specularHighlights = sunlightColor * specular * waterReflectivity;
 
     // color
     lowp vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
@@ -61,8 +63,14 @@ void main() {
     // gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
 
     // gl_FragColor = mix(reflectColor, refractColor, refractiveFactor);
-    gl_FragColor = mix(reflectColor, refractColor, 1.0);
-    gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.1);
+    if (useReflection == 1 && useRefraction == 1) {
+      gl_FragColor = mix(reflectColor, refractColor, 0.5);
+    } else if (useReflection == 1) {
+      gl_FragColor = reflectColor;
+    } else if (useRefraction == 1) {
+      gl_FragColor = refractColor;
+    }
+    gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.2);
 
     // gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.5) + vec4(specularHighlights, 0.0);
 }

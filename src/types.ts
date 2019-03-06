@@ -8,6 +8,8 @@ export interface ProgramProperties {
     time: number;
     renderWater: boolean;
     renderTerrain: boolean;
+    useRefraction: boolean;
+    useReflection: boolean;
 }
 export interface BufferObject {
     buffers: {

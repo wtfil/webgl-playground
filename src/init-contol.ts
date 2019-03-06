@@ -48,11 +48,17 @@ export function initControls() {
     })
     window.addEventListener('keypress', e => {
         switch (e.key) {
-            case 'r':
+            case '1':
+                ee.emit('toggleRenderTerrain');
+                break;
+            case '2':
                 ee.emit('toggleRenderWater');
                 break;
-            case 't':
-                ee.emit('toggleRenderTerrain');
+            case '3':
+                ee.emit('toggleRefraction');
+                break;
+            case '4':
+                ee.emit('toggleReflection');
                 break;
             default:
                 pressed[e.key] = true;

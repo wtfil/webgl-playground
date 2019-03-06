@@ -24,6 +24,10 @@ async function setup() {
     }
     document.body.appendChild(canvas);
 
+    const propertiesNode = document.createElement('pre');
+    propertiesNode.style.cssFloat = 'right';
+    document.body.appendChild(propertiesNode);
+
     const terrainProgram = createProgram(
         gl,
         terrainVertextShaderSource,
@@ -35,7 +39,7 @@ async function setup() {
         waterFragmentShaderSource
     );
 
-    const terrainData = await createTerrain('/heatmaps/mountain1.jpg', 50, 5);
+    const terrainData = await createTerrain('/heightmaps/mountain2.png', 50, 5);
     const terrain = terrainData && createBuffers(gl, terrainData, {});
 
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
@@ -54,7 +58,9 @@ async function setup() {
         start: Date.now(),
         time: 0,
         renderWater: true,
-        renderTerrain: true
+        renderTerrain: true,
+        useReflection: true,
+        useRefraction: true
     };
 
     const emitter = initControls();
@@ -62,9 +68,19 @@ async function setup() {
     emitter
         .on('toggleRenderWater', () => {
             properties.renderWater = !properties.renderWater;
+            renderProperties();
         })
         .on('toggleRenderTerrain', () => {
             properties.renderTerrain = !properties.renderTerrain;
+            renderProperties();
+        })
+        .on('toggleRefraction', () => {
+            properties.useRefraction = !properties.useRefraction;
+            renderProperties();
+        })
+        .on('toggleReflection', () => {
+            properties.useReflection = !properties.useReflection;
+            renderProperties();
         })
         .on('zoom', e => {
             const {cameraPosition, center} = properties;
@@ -77,17 +93,37 @@ async function setup() {
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
+            renderProperties();
         })
         .on('move', e => {
             const move = Vec3.fromValues(e.dx, e.dy, 0);
             const {cameraPosition, center} = properties;
             Vec3.add(cameraPosition, cameraPosition, move);
             Vec3.add(center, center, move);
+            renderProperties();
         })
         .on('changeLight', e => {
             const {directionalLightVector} = properties;
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], e.dl);
+            renderProperties();
         })
+
+    function renderProperties() {
+        propertiesNode.innerText = JSON.stringify(
+            properties,
+            (key, value) => {
+                if (value instanceof Float32Array) {
+                    return Array.from(value);
+                }
+                if (key === 'time' || key === 'start') {
+                    return undefined;
+                }
+                return value;
+            },
+            4
+        );
+    }
+
     function render() {
         properties.time = Date.now() - properties.start;
         drawScene({
@@ -102,7 +138,9 @@ async function setup() {
     }
     
     render();
+    renderProperties();
 }
+
 
 function createShader(gl: WebGLRenderingContext, type: number, source: string) {
     const shader = gl.createShader(type);
@@ -383,6 +421,8 @@ function drawScene(props: {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
         gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.06) % 1);
+        gl.uniform1i(waterProgram.uniforms.useRefraction, Number(properties.useRefraction));
+        gl.uniform1i(waterProgram.uniforms.useReflection, Number(properties.useReflection));
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
