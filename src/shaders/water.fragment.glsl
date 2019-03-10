@@ -9,12 +9,13 @@ uniform sampler2D reflectionTexture;
 uniform lowp float dudvOffset;
 uniform int useRefraction;
 uniform int useReflection;
+uniform lowp vec3 directionalLightVector;
 
 const lowp float waterDistortionStrenth = 0.03;
 const lowp float fresnelStrength = 1.5;
 const lowp float waterReflectivity = 0.5;
 const lowp vec3 sunlightColor = vec3(1.0, 1.0, 1.0);
-const lowp vec3 sunlightDir = normalize(vec3(-1.0, -1.0, 0.5));
+// const lowp vec3 directionalLightVector = normalize(vec3(-1.0, -1.0, 0.5));
 const lowp vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
 const lowp vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
 const lowp float shineDamper = 20.0;
@@ -51,7 +52,7 @@ void main() {
     // reflectTexCoords.y = clamp(reflectTexCoords.y, -0.999, -0.001);
 
     // lighs
-    lowp vec3 reflectedLight = reflect(normalize(sunlightDir), normal);
+    lowp vec3 reflectedLight = reflect(normalize(directionalLightVector), normal);
     lowp float specular = max(dot(reflectedLight, toCamera), 0.0);
     specular = pow(specular, shineDamper);
     lowp vec3 specularHighlights = sunlightColor * specular * waterReflectivity;
@@ -60,11 +61,8 @@ void main() {
     lowp vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
     lowp vec4 reflectColor = texture2D(reflectionTexture, reflectTexCoords);
 
-    // gl_FragColor = mix(refractColor, shallowWaterColor, 0.1);
-
-    // gl_FragColor = mix(reflectColor, refractColor, refractiveFactor);
     if (useReflection == 1 && useRefraction == 1) {
-      gl_FragColor = mix(reflectColor, refractColor, 0.5);
+      gl_FragColor = mix(reflectColor, refractColor, refractiveFactor);
     } else if (useReflection == 1) {
       gl_FragColor = reflectColor;
     } else if (useRefraction == 1) {
@@ -72,5 +70,5 @@ void main() {
     }
     gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.2);
 
-    // gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.5) + vec4(specularHighlights, 0.0);
+    gl_FragColor = gl_FragColor + vec4(specularHighlights, 0.0);
 }

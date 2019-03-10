@@ -1,6 +1,7 @@
 import {EventEmitter} from 'events';
 
 export function initControls() {
+    let mousedown = false;
     const ee = new EventEmitter();
     const pressed: {[key: string]: boolean} = {};
     const pullKeys = () => {
@@ -66,6 +67,19 @@ export function initControls() {
     });
     window.addEventListener('keyup', e => {
         pressed[e.key] = false;
+    })
+
+    window.addEventListener('mousedown', () => {
+        mousedown = true;
+    })
+    window.addEventListener('mouseup', () => {
+        mousedown = false;
+    })
+    window.addEventListener('mousemove', e => {
+        const {movementX, movementY} = e;
+        if (mousedown) {
+            ee.emit('rotate', {dx: movementX, dy: movementY})
+        }
     })
     return ee;
 }

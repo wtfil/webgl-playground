@@ -6,6 +6,7 @@ import waterFragmentShaderSource from './shaders/water.fragment.glsl';
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
+import {renderProperties} from './render-properties';
 import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
@@ -14,7 +15,7 @@ const CANVAS_WIDTH = 512;
 const CANVAS_HEIGHT = 512;
 
 async function setup() {
-    const canvas = document.createElement('canvas');
+    const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     const gl = canvas.getContext('experimental-webgl');
@@ -22,11 +23,8 @@ async function setup() {
         console.warn('Can not create webgl context')
         return;
     }
-    document.body.appendChild(canvas);
 
-    const propertiesNode = document.createElement('pre');
-    propertiesNode.style.cssFloat = 'right';
-    document.body.appendChild(propertiesNode);
+    const propertiesNode = document.querySelector('[data-properties]') as HTMLTableElement;
 
     const terrainProgram = createProgram(
         gl,
@@ -68,19 +66,19 @@ async function setup() {
     emitter
         .on('toggleRenderWater', () => {
             properties.renderWater = !properties.renderWater;
-            renderProperties();
+            updateProperties();
         })
         .on('toggleRenderTerrain', () => {
             properties.renderTerrain = !properties.renderTerrain;
-            renderProperties();
+            updateProperties();
         })
         .on('toggleRefraction', () => {
             properties.useRefraction = !properties.useRefraction;
-            renderProperties();
+            updateProperties();
         })
         .on('toggleReflection', () => {
             properties.useReflection = !properties.useReflection;
-            renderProperties();
+            updateProperties();
         })
         .on('zoom', e => {
             const {cameraPosition, center} = properties;
@@ -93,35 +91,34 @@ async function setup() {
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
-            renderProperties();
+            updateProperties();
         })
         .on('move', e => {
             const move = Vec3.fromValues(e.dx, e.dy, 0);
             const {cameraPosition, center} = properties;
             Vec3.add(cameraPosition, cameraPosition, move);
             Vec3.add(center, center, move);
-            renderProperties();
+            updateProperties();
+        })
+        .on('rotate', e => {
+            const {cameraPosition, center} = properties;
+            const distance = Vec3.distance(center, cameraPosition);
+            const eye = Vec3.create();
+            Vec3.sub(eye, cameraPosition, center);
+            Vec3.add(eye, eye, [e.dx, e.dy, 0]);
+            Vec3.normalize(eye, eye);
+            Vec3.scale(eye, eye, distance);
+            Vec3.add(cameraPosition, center, eye);
+            updateProperties();
         })
         .on('changeLight', e => {
             const {directionalLightVector} = properties;
             Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], e.dl);
-            renderProperties();
+            updateProperties();
         })
-
-    function renderProperties() {
-        propertiesNode.innerText = JSON.stringify(
-            properties,
-            (key, value) => {
-                if (value instanceof Float32Array) {
-                    return Array.from(value);
-                }
-                if (key === 'time' || key === 'start') {
-                    return undefined;
-                }
-                return value;
-            },
-            4
-        );
+    
+    const updateProperties = () => {
+        renderProperties(propertiesNode, properties);
     }
 
     function render() {
@@ -138,7 +135,7 @@ async function setup() {
     }
     
     render();
-    renderProperties();
+    updateProperties();
 }
 
 
@@ -292,9 +289,10 @@ function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) 
     const model = Mat4.create();
 
     gl.viewport(0, 0, width, height);
-    gl.clearColor(135 / 256, 206 / 256, 235 / 256, 1.0);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clearDepth(1.0);
+    // gl.clearColor(135 / 256, 206 / 256, 235 / 256, 1.0);
+    // gl.clearColor(0, 0, 0, 0);
+    gl.clearColor(0.53, 0.8, 0.98, 1.);
+    // gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -346,13 +344,14 @@ function drawScene(props: {
     water: BufferObject
 }) {
     
-    let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const waterHeight = 10;
+    let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     const {model, projection} = prepareScene(gl, properties);
     let refractionTexture: WebGLTexture;
     let reflectionTexture: WebGLTexture;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0) => {
+        // const {model, projection} = prepareScene(gl, properties);
         gl.useProgram(terrainProgram);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
         // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
@@ -371,7 +370,7 @@ function drawScene(props: {
             model
         );
 
-        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, new Float32Array(properties.directionalLightVector));
+        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
@@ -389,8 +388,8 @@ function drawScene(props: {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clearDepth(1.0);
+        // gl.clearColor(0, 0, 0, 0);
+        // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -404,8 +403,9 @@ function drawScene(props: {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clearDepth(1.0);
+        // gl.clearColor(0, 0, 0, 0);
+        // gl.clearColor(0.53, 0.8, 0.98, 1.);
+        // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -415,6 +415,8 @@ function drawScene(props: {
 
     const renderWater = () => {
         Mat4.translate(model, model, [0, 0, waterHeight]);
+        Mat4.scale(model, model, [512, 512, 512]);
+
         gl.useProgram(waterProgram);
         bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
@@ -424,19 +426,18 @@ function drawScene(props: {
         gl.uniform1i(waterProgram.uniforms.useRefraction, Number(properties.useRefraction));
         gl.uniform1i(waterProgram.uniforms.useReflection, Number(properties.useReflection));
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
+        gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
             projection
         );
 
-        Mat4.scale(model, model, [512, 512, 512]);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.model,
             false,
             model
         );
-        Mat4.scale(model, model, [1 / 512, 1 / 512, 1 / 512]);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, water.textures.dudv);
@@ -464,7 +465,7 @@ function drawScene(props: {
         refractionTexture = getRefractTexture();
         reflectionTexture = getReflectionTexture();
     }
-    gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
+    // gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     
     if (properties.renderTerrain) {
         renderTerrain(0);
