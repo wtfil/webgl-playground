@@ -58,7 +58,7 @@ async function setup() {
         renderWater: true,
         renderTerrain: true,
         useReflection: true,
-        useRefraction: true
+        useRefraction: false
     };
 
     const emitter = initControls();
@@ -281,26 +281,11 @@ function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
     gl.enableVertexAttribArray(attribute);
 }
 
-function prepareScene(gl: WebGLRenderingContext, properties: ProgramProperties) {
-    const width = gl.canvas.clientWidth;
-    const height = gl.canvas.clientHeight;
-
+function createMatrices(properties: ProgramProperties) {
     const projection = Mat4.create();
     const model = Mat4.create();
-
-    gl.viewport(0, 0, width, height);
-    // gl.clearColor(135 / 256, 206 / 256, 235 / 256, 1.0);
-    // gl.clearColor(0, 0, 0, 0);
-    gl.clearColor(0.53, 0.8, 0.98, 1.);
-    // gl.clearDepth(1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);   
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    Mat4.perspective(projection, 45 * Math.PI / 180, width / height, 0.1, 1000.0);
-
+    Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
     Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
-
     return {model, projection}
 }
 
@@ -346,12 +331,11 @@ function drawScene(props: {
     
     const waterHeight = 10;
     let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
-    const {model, projection} = prepareScene(gl, properties);
     let refractionTexture: WebGLTexture;
     let reflectionTexture: WebGLTexture;
 
-    const renderTerrain = (clipLevel: -1 | 1 | 0) => {
-        // const {model, projection} = prepareScene(gl, properties);
+    const renderTerrain = (clipLevel: -1 | 1 | 0, flipY: boolean) => {
+        const {model, projection} = createMatrices(properties);
         gl.useProgram(terrainProgram);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
         // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
@@ -391,7 +375,7 @@ function drawScene(props: {
         // gl.clearColor(0, 0, 0, 0);
         // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        renderTerrain(1);
+        renderTerrain(1, false);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         return texture;
@@ -407,13 +391,14 @@ function drawScene(props: {
         // gl.clearColor(0.53, 0.8, 0.98, 1.);
         // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        renderTerrain(-1);
+        renderTerrain(-1, true);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         return texture;
     }
 
     const renderWater = () => {
+        const {model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
         Mat4.scale(model, model, [512, 512, 512]);
 
@@ -425,6 +410,7 @@ function drawScene(props: {
         gl.uniform1f(waterProgram.uniforms.dudvOffset, (properties.time / 1000 * 0.06) % 1);
         gl.uniform1i(waterProgram.uniforms.useRefraction, Number(properties.useRefraction));
         gl.uniform1i(waterProgram.uniforms.useReflection, Number(properties.useReflection));
+        gl.uniform3fv(waterProgram.uniforms.center, properties.center);
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
         gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniformMatrix4fv(
@@ -461,14 +447,20 @@ function drawScene(props: {
         gl.disable(gl.BLEND);
     }
 
+    gl.clearDepth(1.0);
+    gl.clearColor(0.53, 0.8, 0.98, 1.);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);   
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     if (properties.renderWater) {
         refractionTexture = getRefractTexture();
         reflectionTexture = getReflectionTexture();
     }
-    // gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     
     if (properties.renderTerrain) {
-        renderTerrain(0);
+        gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        renderTerrain(0, false);
     }
 
     if (properties.renderWater) {

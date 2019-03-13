@@ -78,7 +78,7 @@ export function initControls() {
     window.addEventListener('mousemove', e => {
         const {movementX, movementY} = e;
         if (mousedown) {
-            ee.emit('rotate', {dx: movementX, dy: movementY})
+            ee.emit('rotate', {dx: -movementX, dy: movementY})
         }
     })
     return ee;

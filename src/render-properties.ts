@@ -19,7 +19,7 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
         },
         {
             title: 'camera',
-            control: 'a d w s',
+            control: 'a d w s wheel',
             value: arrToString(properties.cameraPosition)
         },
         {
@@ -49,18 +49,8 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
         }
     ];
     const columns = ['title', 'control', 'value'];
-    const head = node.querySelector('thead')!;
     const body = node.querySelector('tbody')!;
-    head.innerHTML = body.innerHTML = '';
-    {
-        const tr = document.createElement('tr');
-        columns.forEach(key => {
-            const td = document.createElement('td');
-            td.innerText = key;
-            tr.appendChild(td);
-        })
-        head.appendChild(tr);
-    }
+    body.innerHTML = '';
 
     info.forEach((item: any) => {
         const tr = document.createElement('tr');
