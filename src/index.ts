@@ -281,12 +281,21 @@ function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: n
     gl.enableVertexAttribArray(attribute);
 }
 
-function createMatrices(properties: ProgramProperties) {
+function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     const projection = Mat4.create();
     const model = Mat4.create();
+    let eye: Vec3;
+    if (flip) {
+        eye = Vec3.create();
+        Vec3.sub(eye, properties.cameraPosition, properties.center);
+        eye[2] = -eye[2];
+        Vec3.add(eye, eye, properties.center);
+    } else {
+        eye = properties.cameraPosition;
+    }
     Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
-    Mat4.lookAt(model, properties.cameraPosition, properties.center, [0, 1, 0]);
-    return {model, projection}
+    Mat4.lookAt(model, eye, properties.center, [0, 1, 0]);
+    return {model, projection};
 }
 
 function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
@@ -330,12 +339,14 @@ function drawScene(props: {
 }) {
     
     const waterHeight = 10;
+    const waterSize = 512;
     let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     let refractionTexture: WebGLTexture;
     let reflectionTexture: WebGLTexture;
 
-    const renderTerrain = (clipLevel: -1 | 1 | 0, flipY: boolean) => {
-        const {model, projection} = createMatrices(properties);
+    const renderTerrain = (clipLevel: -1 | 1 | 0, flip: boolean) => {
+        const {model, projection} = createMatrices(properties, flip);
+
         gl.useProgram(terrainProgram);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
         // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
@@ -366,8 +377,8 @@ function drawScene(props: {
     }
 
     const getRefractTexture = () => {
-        const width = 512;
-        const height = 512;
+        const width = waterSize;
+        const height = waterSize;
         const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -381,15 +392,15 @@ function drawScene(props: {
         return texture;
     }
     const getReflectionTexture = () => {
-        const width = 512;
-        const height = 512;
+        const width = waterSize;
+        const height = waterSize;
         const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
         // gl.clearColor(0, 0, 0, 0);
         // gl.clearColor(0.53, 0.8, 0.98, 1.);
-        // gl.clearDepth(1.0);
+        gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1, true);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -400,7 +411,7 @@ function drawScene(props: {
     const renderWater = () => {
         const {model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
-        Mat4.scale(model, model, [512, 512, 512]);
+        Mat4.scale(model, model, [waterSize, waterSize, 1]);
 
         gl.useProgram(waterProgram);
         bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
@@ -458,8 +469,8 @@ function drawScene(props: {
         reflectionTexture = getReflectionTexture();
     }
     
+    gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     if (properties.renderTerrain) {
-        gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         renderTerrain(0, false);
     }
 

@@ -30,7 +30,7 @@ void main() {
     // base refract/reflect texture coordinates
     lowp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
     lowp vec2 refractTexCoords = vec2(ndc.x, +ndc.y);
-    lowp vec2 reflectTexCoords = vec2(ndc.x, +ndc.y);
+    lowp vec2 reflectTexCoords = vec2(1.0 - ndc.x, +ndc.y);
 
     // refractive factor
     lowp vec3 toCamera = normalize(fromFragmentToCamera);

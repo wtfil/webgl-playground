@@ -1,5 +1,5 @@
 varying highp vec3 vLighting;
-varying lowp float shouldClip;
+varying highp float shouldClip;
 varying lowp vec4 fragmentColor;
 
 const lowp vec4 grassColor = vec4(0.12, 0.43, 0.02, 1.0);

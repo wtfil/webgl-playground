@@ -28,9 +28,9 @@ void main() {
 
   fragmentColor = colors;
   if (clipLevel == 1.0) {
-    shouldClip = position.z >= clipZ ? 1.0 : 0.0;
+    shouldClip = position.z > clipZ ? 1.0 : 0.0;
   } else if (clipLevel == -1.0) {
-    shouldClip = position.z <= clipZ ? 1.0 : 0.0;
+    shouldClip = position.z < clipZ ? 1.0 : 0.0;
   } else {
     shouldClip = 0.0;
   }
