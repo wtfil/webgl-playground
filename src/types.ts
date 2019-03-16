@@ -20,9 +20,10 @@ export interface BufferObject {
         [key: string]: WebGLTexture
     }
 }
-export type Program = WebGLProgram & {
+export interface Program {
+    program: WebGLProgram;
     uniforms: {
-        [key: string]: WebGLUniformLocation
+        [key: string]: WebGLUniformLocation;
     },
     attributes: {
         [key: string]: number;

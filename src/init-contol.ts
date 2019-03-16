@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 
-export function initControls() {
+export function initControls(elem: HTMLElement) {
     let mousedown = false;
     const ee = new EventEmitter();
     const pressed: {[key: string]: boolean} = {};
@@ -39,7 +39,7 @@ export function initControls() {
     }
     pullKeys();
 
-    window.addEventListener('wheel', e => {
+    elem.addEventListener('wheel', e => {
         const {deltaY: dy} = e;
         if (dy) {
             ee.emit('zoom', {
@@ -69,7 +69,7 @@ export function initControls() {
         pressed[e.key] = false;
     })
 
-    window.addEventListener('mousedown', () => {
+    elem.addEventListener('mousedown', () => {
         mousedown = true;
     })
     window.addEventListener('mouseup', () => {

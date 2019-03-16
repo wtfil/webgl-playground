@@ -14,6 +14,8 @@ window.addEventListener('load', setup);
 const CANVAS_WIDTH = 512;
 const CANVAS_HEIGHT = 512;
 
+const DETAILS_LEVEL = 5;
+
 async function setup() {
     const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
@@ -36,8 +38,8 @@ async function setup() {
         waterVertextShaderSource,
         waterFragmentShaderSource
     );
-
-    const terrainData = await createTerrain('/heightmaps/mountain2.png', 50, 5);
+    
+    const terrainData = await createTerrain('/heightmaps/mountain2.png', 500 / DETAILS_LEVEL, DETAILS_LEVEL);
     const terrain = terrainData && createBuffers(gl, terrainData, {});
 
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
@@ -49,8 +51,8 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        center: Vec3.fromValues(0, 0, 0),
-        cameraPosition: Vec3.fromValues(0, 0, 200),
+        center: Vec3.fromValues(-23.0, +20.0, 0.0),
+        cameraPosition: Vec3.fromValues(-24.2, -254.7, +53.7),
 
         directionalLightVector: Vec3.fromValues(0, 0, 1),
         start: Date.now(),
@@ -58,10 +60,10 @@ async function setup() {
         renderWater: true,
         renderTerrain: true,
         useReflection: true,
-        useRefraction: false
+        useRefraction: true
     };
 
-    const emitter = initControls();
+    const emitter = initControls(canvas);
 
     emitter
         .on('toggleRenderWater', () => {
@@ -164,14 +166,14 @@ function createProgram(
 
     const vertexShader = createShader(gl,  gl.VERTEX_SHADER, vertextShaderSource);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-    const webglProgram = gl.createProgram();
+    const program = gl.createProgram();
 
-    if (!webglProgram || !vertexShader || !fragmentShader) {
+    if (!program || !vertexShader || !fragmentShader) {
         console.warn('Failed to create shader program');
         return null;
     }
 
-    const program = webglProgram as Program;
+    // const program = webglProgram as Program;
 
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
@@ -183,23 +185,23 @@ function createProgram(
     }
     const attributeRE = /^attribute.*\s(.+);$/;
     const uniformRE = /^uniform.*\s(.+);$/;
-    program.attributes = {};
-    program.uniforms = {};
+    const attributes: Program['attributes'] = {};
+    const uniforms: Program['uniforms'] = {};
 
     [vertextShaderSource, fragmentShaderSource].join('\n').split('\n').forEach(line => {
         const am = line.trim().match(attributeRE);
         const um = line.trim().match(uniformRE);
         if (am) {
             const name = am[1];
-            program.attributes[name] = gl.getAttribLocation(program, name);
+            attributes[name] = gl.getAttribLocation(program, name);
         }
         if (um) {
             const name = um[1];
-            program.uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
+            uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
         }
     })
 
-    return program;
+    return {program, uniforms, attributes};
 }
 
 async function loadTexture(gl: WebGLRenderingContext, url: string) {
@@ -338,7 +340,7 @@ function drawScene(props: {
     water: BufferObject
 }) {
     
-    const waterHeight = 10;
+    const waterHeight = 50 / DETAILS_LEVEL;
     const waterSize = 512;
     let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
     let refractionTexture: WebGLTexture;
@@ -346,8 +348,12 @@ function drawScene(props: {
 
     const renderTerrain = (clipLevel: -1 | 1 | 0, flip: boolean) => {
         const {model, projection} = createMatrices(properties, flip);
+        // reflection
+        if (flip) {
+            Mat4.translate(model, model, [0, 0, 2 * clipLevel * waterHeight]);
+        }
 
-        gl.useProgram(terrainProgram);
+        gl.useProgram(terrainProgram.program);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
         // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
         bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
@@ -373,7 +379,10 @@ function drawScene(props: {
         // gl.bindTexture(gl.TEXTURE_2D, terrain.textures.surface);
         // gl.uniform1i(terrainProgram.uniforms.texture, 0);
 
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
+        gl.disable(gl.BLEND);
     }
 
     const getRefractTexture = () => {
@@ -399,8 +408,7 @@ function drawScene(props: {
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
         // gl.clearColor(0, 0, 0, 0);
-        // gl.clearColor(0.53, 0.8, 0.98, 1.);
-        gl.clearDepth(1.0);
+        // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1, true);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -413,7 +421,7 @@ function drawScene(props: {
         Mat4.translate(model, model, [0, 0, waterHeight]);
         Mat4.scale(model, model, [waterSize, waterSize, 1]);
 
-        gl.useProgram(waterProgram);
+        gl.useProgram(waterProgram.program);
         bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
         bindBuffer(gl, water.buffers.texture, waterProgram.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);

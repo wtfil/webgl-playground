@@ -37,12 +37,13 @@ void main() {
     lowp vec4 normalMapColor = texture2D(normalMapTexture, distortedTexCoords);
     lowp vec3 normal = vec3(
       normalMapColor.r * 2.0 - 1.0,
-      normalMapColor.b * 2.6,
-      normalMapColor.g * 2.0 - 1.0
+      normalMapColor.g * 2.0 - 1.0,
+      normalMapColor.b * 2.0 - 1.0
     );
     normal = normalize(normal);
     lowp float refractiveFactor = dot(toCamera, normal);
     refractiveFactor = pow(refractiveFactor, fresnelStrength);
+    // refractiveFactor = 0.5;
 
     // puting all together
     refractTexCoords += totalDistortion;
