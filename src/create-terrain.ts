@@ -1,4 +1,4 @@
-import {vec3 as Vec3} from "gl-matrix";
+import {vec3 as Vec3} from 'gl-matrix';
 
 export async function createTerrain(src: string, maxHeight: number, size: number) {
     const canvas = document.createElement('canvas');

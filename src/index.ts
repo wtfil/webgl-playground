@@ -1,4 +1,5 @@
 import {mat4 as Mat4, vec3 as Vec3} from 'gl-matrix';
+
 import terrainVertextShaderSource from './shaders/terrain.vertex.glsl';
 import terrainFragmentShaderSource from './shaders/terrain.fragment.glsl';
 import waterVertextShaderSource from './shaders/water.vertex.glsl';
@@ -172,9 +173,6 @@ function createProgram(
         console.warn('Failed to create shader program');
         return null;
     }
-
-    // const program = webglProgram as Program;
-
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
@@ -183,23 +181,19 @@ function createProgram(
         console.warn(gl.getProgramInfoLog(program));
         return null;
     }
-    const attributeRE = /^attribute.*\s(.+);$/;
-    const uniformRE = /^uniform.*\s(.+);$/;
     const attributes: Program['attributes'] = {};
     const uniforms: Program['uniforms'] = {};
+    const attributesCount = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+    const uniformsCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
 
-    [vertextShaderSource, fragmentShaderSource].join('\n').split('\n').forEach(line => {
-        const am = line.trim().match(attributeRE);
-        const um = line.trim().match(uniformRE);
-        if (am) {
-            const name = am[1];
-            attributes[name] = gl.getAttribLocation(program, name);
-        }
-        if (um) {
-            const name = um[1];
-            uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
-        }
-    })
+    for (let i = 0; i < attributesCount; i ++) {
+        const name = gl.getActiveAttrib(program, i)!.name;
+        attributes[name] = gl.getAttribLocation(program, name);
+    }
+    for (let i = 0; i < uniformsCount; i ++) {
+        const name = gl.getActiveUniform(program, i)!.name;
+        uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
+    }
 
     return {program, uniforms, attributes};
 }
