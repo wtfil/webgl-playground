@@ -4,10 +4,14 @@ import terrainVertextShaderSource from './shaders/terrain.vertex.glsl';
 import terrainFragmentShaderSource from './shaders/terrain.fragment.glsl';
 import waterVertextShaderSource from './shaders/water.vertex.glsl';
 import waterFragmentShaderSource from './shaders/water.fragment.glsl';
+import sunVertextShaderSource from './shaders/sun.vertex.glsl';
+import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {renderProperties} from './render-properties';
+import {createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
+
 import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
@@ -39,6 +43,11 @@ async function setup() {
         waterVertextShaderSource,
         waterFragmentShaderSource
     );
+    const sunProgram = createProgram(
+        gl,
+        sunVertextShaderSource,
+        sunFragmentShaderSource
+    )
     
     const terrainData = await createTerrain('/heightmaps/mountain2.png', 500 / DETAILS_LEVEL, DETAILS_LEVEL);
     const terrain = terrainData && createBuffers(gl, terrainData, {});
@@ -47,7 +56,7 @@ async function setup() {
     const normalMapTexture = await loadTexture(gl, '/textures/normalmap.png');
     const water = createBuffers(gl, createWater(), {dudv: dudvTexture, normalMap: normalMapTexture});
 
-    if (!water || !waterProgram || !terrainProgram || !terrain) {
+    if (!water || !waterProgram || !terrainProgram || !terrain || !sunProgram) {
         return;
     }
 
@@ -61,7 +70,8 @@ async function setup() {
         renderWater: true,
         renderTerrain: true,
         useReflection: true,
-        useRefraction: true
+        useRefraction: true,
+        renderSun: true
     };
 
     const emitter = initControls(canvas);
@@ -81,6 +91,10 @@ async function setup() {
         })
         .on('toggleReflection', () => {
             properties.useReflection = !properties.useReflection;
+            updateProperties();
+        })
+        .on('toggleRenderSun', () => {
+            properties.renderSun = !properties.renderSun;
             updateProperties();
         })
         .on('zoom', e => {
@@ -130,6 +144,7 @@ async function setup() {
             gl: gl!,
             terrainProgram: terrainProgram!,
             waterProgram: waterProgram!,
+            sunProgram: sunProgram!,
             properties,
             terrain: terrain!,
             water: water!
@@ -139,98 +154,6 @@ async function setup() {
     
     render();
     updateProperties();
-}
-
-
-function createShader(gl: WebGLRenderingContext, type: number, source: string) {
-    const shader = gl.createShader(type);
-    if (!shader) {
-        return null;
-    }
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.warn(gl.getShaderInfoLog(shader));
-        console.warn(source);
-        gl.deleteShader(shader);
-        return null;
-    }
-    return shader;
-}
-
-
-function createProgram(
-    gl: WebGLRenderingContext,
-    vertextShaderSource: string,
-    fragmentShaderSource: string,
-): Program | null {
-
-    const vertexShader = createShader(gl,  gl.VERTEX_SHADER, vertextShaderSource);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-    const program = gl.createProgram();
-
-    if (!program || !vertexShader || !fragmentShader) {
-        console.warn('Failed to create shader program');
-        return null;
-    }
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.warn(gl.getProgramInfoLog(program));
-        return null;
-    }
-    const attributes: Program['attributes'] = {};
-    const uniforms: Program['uniforms'] = {};
-    const attributesCount = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-    const uniformsCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-
-    for (let i = 0; i < attributesCount; i ++) {
-        const name = gl.getActiveAttrib(program, i)!.name;
-        attributes[name] = gl.getAttribLocation(program, name);
-    }
-    for (let i = 0; i < uniformsCount; i ++) {
-        const name = gl.getActiveUniform(program, i)!.name;
-        uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
-    }
-
-    return {program, uniforms, attributes};
-}
-
-async function loadTexture(gl: WebGLRenderingContext, url: string) {
-    const image: HTMLImageElement = await new Promise((resolve, reject) => {
-        const image = new Image();
-        image.src = url;
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-    });
-    const texture = gl.createTexture();
-    const isPow2 = (n: number) => (n & (n - 1)) === 0;
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA,
-        1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-        new Uint8Array([0, 0, 255, 255])
-    );
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA,
-        gl.RGBA, gl.UNSIGNED_BYTE, image
-    );
-
-    if (isPow2(image.width) && isPow2(image.height)) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    }
-
-    return texture as WebGLTexture;
-
 }
 
 function createBuffers(
@@ -251,30 +174,6 @@ function createBuffers(
         textures,
         size: arrays.indices.length
     }
-}
-
-function createBuffer(gl: WebGLRenderingContext, type: number, data: Float32Array | Uint16Array) {
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(type, buffer);
-    gl.bufferData(
-        type,
-        data,
-        gl.STATIC_DRAW
-    );
-    return buffer as WebGLBuffer;
-}
-
-function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attribute: number, numComponents: number) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.vertexAttribPointer(
-        attribute,
-        numComponents,
-        gl.FLOAT,
-        false,
-        0,
-        0
-    );
-    gl.enableVertexAttribArray(attribute);
 }
 
 function createMatrices(properties: ProgramProperties, flip: boolean = false) {
@@ -329,6 +228,7 @@ function drawScene(props: {
     gl: WebGLRenderingContext,
     terrainProgram: Program,
     waterProgram: Program,
+    sunProgram: Program,
     properties: ProgramProperties,
     terrain: BufferObject,
     water: BufferObject
@@ -336,11 +236,14 @@ function drawScene(props: {
     
     const waterHeight = 50 / DETAILS_LEVEL;
     const waterSize = 512;
-    let {gl, terrainProgram, waterProgram, properties, terrain, water} = props;
+    let {gl, terrainProgram, waterProgram, sunProgram, properties, terrain, water} = props;
     let refractionTexture: WebGLTexture;
     let reflectionTexture: WebGLTexture;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0, flip: boolean) => {
+        if (!properties.renderTerrain) {
+            return;
+        }
         const {model, projection} = createMatrices(properties, flip);
         // reflection
         if (flip) {
@@ -405,12 +308,16 @@ function drawScene(props: {
         // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1, true);
+        renderSun();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         return texture;
     }
 
     const renderWater = () => {
+        if (!properties.renderWater) {
+            return;
+        }
         const {model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
         Mat4.scale(model, model, [waterSize, waterSize, 1]);
@@ -460,6 +367,44 @@ function drawScene(props: {
         gl.disable(gl.BLEND);
     }
 
+    function renderSun() {
+        if (!properties.renderSun) {
+            return;
+        }
+
+        const {model, projection} = createMatrices(properties);
+        const position = [
+            50, 0, 100,
+            50, 100, 100,
+            150, 100, 100
+        ];
+        const indices = [0, 1, 2];
+        const positionBuffer = createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(position));
+        const indicesBuffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices));
+
+        gl.useProgram(sunProgram.program);
+
+        bindBuffer(gl, positionBuffer, sunProgram.attributes.position, 3);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+
+        gl.uniformMatrix4fv(
+            sunProgram.uniforms.projection,
+            false,
+            projection
+        );
+
+        gl.uniformMatrix4fv(
+            sunProgram.uniforms.model,
+            false,
+            model
+        );
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_SHORT, 0);
+        gl.disable(gl.BLEND);
+    }
+
     gl.clearDepth(1.0);
     gl.clearColor(0.53, 0.8, 0.98, 1.);
     gl.enable(gl.DEPTH_TEST);
@@ -472,12 +417,9 @@ function drawScene(props: {
     }
     
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    if (properties.renderTerrain) {
-        renderTerrain(0, false);
-    }
 
-    if (properties.renderWater) {
-        renderWater();
-    }
+    renderTerrain(0, false);
+    renderWater();
+    renderSun();
 
 }

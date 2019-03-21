@@ -46,6 +46,11 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             title: 'use reflection',
             control: '4',
             value: properties.useReflection
+        },
+        {
+            title: 'render sun disk',
+            control: '5',
+            value: properties.renderSun
         }
     ];
     const columns = ['title', 'control', 'value'];

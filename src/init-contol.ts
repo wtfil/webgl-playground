@@ -61,6 +61,9 @@ export function initControls(elem: HTMLElement) {
             case '4':
                 ee.emit('toggleReflection');
                 break;
+            case '5':
+                ee.emit('toggleRenderSun');
+                break;
             default:
                 pressed[e.key] = true;
         }
