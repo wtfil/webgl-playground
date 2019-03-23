@@ -10,14 +10,14 @@ import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {renderProperties} from './render-properties';
-import {createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
+import {createLazyFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const CANVAS_WIDTH = 512;
-const CANVAS_HEIGHT = 512;
+const CANVAS_WIDTH = 1024;
+const CANVAS_HEIGHT = 1024;
 
 const DETAILS_LEVEL = 5;
 
@@ -193,37 +193,6 @@ function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     return {model, projection};
 }
 
-function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
-    const texture = gl.createTexture() as WebGLTexture;
-    const framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA,
-        width, height, 0,
-        gl.RGBA, gl.UNSIGNED_BYTE, null
-    );
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    gl.framebufferTexture2D(
-        gl.FRAMEBUFFER,
-        gl.COLOR_ATTACHMENT0,
-        gl.TEXTURE_2D,
-        texture,
-        0
-    );
-
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    return {texture, framebuffer};
-}
-
 function drawScene(props: {
     gl: WebGLRenderingContext,
     terrainProgram: Program,
@@ -285,12 +254,10 @@ function drawScene(props: {
     const getRefractTexture = () => {
         const width = waterSize;
         const height = waterSize;
-        const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
+        const {framebuffer, texture} = createLazyFramebufferAndTexture(gl, width, height, 0);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        // gl.clearColor(0, 0, 0, 0);
-        // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1, false);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -300,12 +267,10 @@ function drawScene(props: {
     const getReflectionTexture = () => {
         const width = waterSize;
         const height = waterSize;
-        const {framebuffer, texture} = createFramebufferAndTexture(gl, width, height);
+        const {framebuffer, texture} = createLazyFramebufferAndTexture(gl, width, height, 1);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.viewport(0, 0, width, height);
-        // gl.clearColor(0, 0, 0, 0);
-        // gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1, true);
         renderSun();

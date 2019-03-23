@@ -114,3 +114,42 @@ export function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attri
     );
     gl.enableVertexAttribArray(attribute);
 }
+
+
+const frameBuffers = new Map<number, {texture: WebGLTexture, framebuffer: WebGLFramebuffer}>();
+
+export function createLazyFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number, key: number) {
+    if (frameBuffers.has(key)) {
+        return frameBuffers.get(key)!;
+    }
+    const texture = gl.createTexture() as WebGLTexture;
+    const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D, 0, gl.RGBA,
+        width, height, 0,
+        gl.RGBA, gl.UNSIGNED_BYTE, null
+    );
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        texture,
+        0
+    );
+
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    frameBuffers.set(key, {texture, framebuffer})
+
+    return {texture, framebuffer};
+}
