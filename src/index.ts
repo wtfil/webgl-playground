@@ -9,8 +9,9 @@ import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
+import {createSun} from './create-sun';
 import {renderProperties} from './render-properties';
-import {createLazyFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
+import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
 
@@ -18,6 +19,8 @@ window.addEventListener('load', setup);
 
 const CANVAS_WIDTH = 1024;
 const CANVAS_HEIGHT = 1024;
+
+const WATER_SIZE = 512;
 
 const DETAILS_LEVEL = 5;
 
@@ -50,11 +53,37 @@ async function setup() {
     )
     
     const terrainData = await createTerrain('/heightmaps/mountain2.png', 500 / DETAILS_LEVEL, DETAILS_LEVEL);
-    const terrain = terrainData && createBuffers(gl, terrainData, {});
+    const terrain = terrainData && createBuffers(gl, {
+        arrays: terrainData
+    });
 
     const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
     const normalMapTexture = await loadTexture(gl, '/textures/normalmap.png');
-    const water = createBuffers(gl, createWater(), {dudv: dudvTexture, normalMap: normalMapTexture});
+    const [
+        refractionTexture,
+        refractionFramebuffer
+    ] = createFramebufferAndTexture(gl, WATER_SIZE, WATER_SIZE);
+    const [
+        reflectionTexture,
+        reflectionFramebuffer
+    ] = createFramebufferAndTexture(gl, WATER_SIZE, WATER_SIZE);
+    const water = createBuffers(gl, {
+        arrays: createWater(),
+        framebuffers: {
+            refraction: refractionFramebuffer,
+            reflection: reflectionFramebuffer
+        },
+        textures: {
+            dudv: dudvTexture,
+            normalMap: normalMapTexture,
+            refraction: refractionTexture,
+            reflection: reflectionTexture
+        }
+    });
+
+    const sun = createBuffers(gl, {
+        arrays: createSun()
+    });
 
     if (!water || !waterProgram || !terrainProgram || !terrain || !sunProgram) {
         return;
@@ -147,7 +176,8 @@ async function setup() {
             sunProgram: sunProgram!,
             properties,
             terrain: terrain!,
-            water: water!
+            water: water!,
+            sun
         });
         requestAnimationFrame(render);
     }
@@ -158,11 +188,15 @@ async function setup() {
 
 function createBuffers(
     gl: WebGLRenderingContext,
-    arrays: {
-        [key: string]: number[]
-    },
-    textures: BufferObject['textures']
+    opts: {
+        arrays: {
+            [key: string]: number[]
+        },
+        textures?: BufferObject['textures'],
+        framebuffers?: BufferObject['framebuffers']
+    }
 ): BufferObject {
+    const {arrays, textures = {}, framebuffers = {}} = opts;
     return {
         buffers: {
             position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
@@ -172,6 +206,7 @@ function createBuffers(
             texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
         },
         textures,
+        framebuffers,
         size: arrays.indices.length
     }
 }
@@ -200,14 +235,12 @@ function drawScene(props: {
     sunProgram: Program,
     properties: ProgramProperties,
     terrain: BufferObject,
-    water: BufferObject
+    water: BufferObject,
+    sun: BufferObject
 }) {
     
     const waterHeight = 50 / DETAILS_LEVEL;
-    const waterSize = 512;
-    let {gl, terrainProgram, waterProgram, sunProgram, properties, terrain, water} = props;
-    let refractionTexture: WebGLTexture;
-    let reflectionTexture: WebGLTexture;
+    const {gl, terrainProgram, waterProgram, sunProgram, properties, terrain, water, sun} = props;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0, flip: boolean) => {
         if (!properties.renderTerrain) {
@@ -251,32 +284,20 @@ function drawScene(props: {
         gl.disable(gl.BLEND);
     }
 
-    const getRefractTexture = () => {
-        const width = waterSize;
-        const height = waterSize;
-        const {framebuffer, texture} = createLazyFramebufferAndTexture(gl, width, height, 0);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        gl.viewport(0, 0, width, height);
+    const updateRefractionTexture = () => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, water.framebuffers.refraction);
+        gl.viewport(0, 0, WATER_SIZE, WATER_SIZE);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(1, false);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return texture;
     }
-    const getReflectionTexture = () => {
-        const width = waterSize;
-        const height = waterSize;
-        const {framebuffer, texture} = createLazyFramebufferAndTexture(gl, width, height, 1);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        gl.viewport(0, 0, width, height);
+    const updateReflectionTexture = () => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, water.framebuffers.reflection);
+        gl.viewport(0, 0, WATER_SIZE, WATER_SIZE);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         renderTerrain(-1, true);
         renderSun();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return texture;
     }
 
     const renderWater = () => {
@@ -285,7 +306,7 @@ function drawScene(props: {
         }
         const {model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
-        Mat4.scale(model, model, [waterSize, waterSize, 1]);
+        Mat4.scale(model, model, [WATER_SIZE, WATER_SIZE, 1]);
 
         gl.useProgram(waterProgram.program);
         bindBuffer(gl, water.buffers.position, waterProgram.attributes.position, 3);
@@ -319,11 +340,11 @@ function drawScene(props: {
         gl.uniform1i(waterProgram.uniforms.normalMapTexture, 1);
 
         gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, refractionTexture);
+        gl.bindTexture(gl.TEXTURE_2D, water.textures.refraction);
         gl.uniform1i(waterProgram.uniforms.refractionTexture, 2);
 
         gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
+        gl.bindTexture(gl.TEXTURE_2D, water.textures.reflection);
         gl.uniform1i(waterProgram.uniforms.reflectionTexture, 3);
 
         gl.enable(gl.BLEND);
@@ -338,19 +359,14 @@ function drawScene(props: {
         }
 
         const {model, projection} = createMatrices(properties);
-        const position = [
-            50, 0, 100,
-            50, 100, 100,
-            150, 100, 100
-        ];
-        const indices = [0, 1, 2];
-        const positionBuffer = createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(position));
-        const indicesBuffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices));
+        Mat4.scale(model, model, [10, 10, 1]);
+        Mat4.translate(model, model, [0, 0, 100]);
+        // Mat4.lookAt(projection, properties.cameraPosition, [0, 0, 100], [0, 0, 0]);
 
         gl.useProgram(sunProgram.program);
 
-        bindBuffer(gl, positionBuffer, sunProgram.attributes.position, 3);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+        bindBuffer(gl, sun.buffers.position, sunProgram.attributes.position, 3);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
 
         gl.uniformMatrix4fv(
             sunProgram.uniforms.projection,
@@ -366,7 +382,7 @@ function drawScene(props: {
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
         gl.disable(gl.BLEND);
     }
 
@@ -377,8 +393,8 @@ function drawScene(props: {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     if (properties.renderWater) {
-        refractionTexture = getRefractTexture();
-        reflectionTexture = getReflectionTexture();
+        updateReflectionTexture();
+        updateRefractionTexture();
     }
     
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);

@@ -116,12 +116,7 @@ export function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attri
 }
 
 
-const frameBuffers = new Map<number, {texture: WebGLTexture, framebuffer: WebGLFramebuffer}>();
-
-export function createLazyFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number, key: number) {
-    if (frameBuffers.has(key)) {
-        return frameBuffers.get(key)!;
-    }
+export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
     const texture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -148,8 +143,5 @@ export function createLazyFramebufferAndTexture(gl: WebGLRenderingContext, width
 
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    frameBuffers.set(key, {texture, framebuffer})
-
-    return {texture, framebuffer};
+    return [texture, framebuffer];
 }

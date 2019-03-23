@@ -19,6 +19,9 @@ export interface BufferObject {
     size: number;
     textures: {
         [key: string]: WebGLTexture
+    },
+    framebuffers: {
+        [key: string]: WebGLFramebuffer
     }
 }
 export interface Program {
