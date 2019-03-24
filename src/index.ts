@@ -1,4 +1,5 @@
-import {mat4 as Mat4, vec3 as Vec3} from 'gl-matrix';
+import Mat4 = require('gl-matrix/mat4');
+import Vec3 = require('gl-matrix/vec3');
 
 import terrainVertextShaderSource from './shaders/terrain.vertex.glsl';
 import terrainFragmentShaderSource from './shaders/terrain.fragment.glsl';
@@ -359,8 +360,11 @@ function drawScene(props: {
         }
 
         const {model, projection} = createMatrices(properties);
-        Mat4.scale(model, model, [10, 10, 1]);
-        Mat4.translate(model, model, [0, 0, 100]);
+        const translate = Vec3.create();
+        Vec3.normalize(translate, properties.directionalLightVector);
+        Mat4.scale(model, model, [10, 10, 10]);
+        Vec3.scale(translate, translate, 10);
+        Mat4.translate(model, model, translate);
         // Mat4.lookAt(projection, properties.cameraPosition, [0, 0, 100], [0, 0, 0]);
 
         gl.useProgram(sunProgram.program);

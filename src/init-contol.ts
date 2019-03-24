@@ -45,6 +45,7 @@ export function initControls(elem: HTMLElement) {
             ee.emit('zoom', {
                 dy: dy / Math.abs(dy) * 10
             });
+            e.preventDefault();
         }
     })
     window.addEventListener('keypress', e => {

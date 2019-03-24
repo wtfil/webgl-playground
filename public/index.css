@@ -9,6 +9,7 @@ body {
     justify-content: space-between;
 }
 .properties-table {
+    font-size: 12px;
     flex-shrink: 0;
     font-family: consolas;
     border-collapse: collapse;
