@@ -19,7 +19,6 @@ export async function createTerrain(src: string, maxHeight: number, size: number
     const heatmap = new Float32Array(width * height);
     let max = 0;
 
-    console.time('heatmap')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j ++) {
             let s = 0;
@@ -35,7 +34,6 @@ export async function createTerrain(src: string, maxHeight: number, size: number
             }
         }
     }
-    console.timeEnd('heatmap')
 
     const position = [];
     const indices = [];
@@ -43,14 +41,13 @@ export async function createTerrain(src: string, maxHeight: number, size: number
     const normals = [];
     const texture = [];
 
-    console.time('position')
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
             const k = i * width + j
             const c = heatmap[k] / max;
             position.push(
-                i - height / 2,
                 j - width / 2,
+                i - height / 2,
                 heatmap[k]
             );
             colors.push(c, c, c, 1)
@@ -69,9 +66,7 @@ export async function createTerrain(src: string, maxHeight: number, size: number
             
         }
     }
-    console.timeEnd('position')
 
-    console.time('normal');
     for (let i = 0; i < position.length / 3; i ++) {
         const w = width;
         const h = height;
@@ -160,7 +155,6 @@ export async function createTerrain(src: string, maxHeight: number, size: number
 
         normals.push(n[0], n[1], n[2]);
     }
-    console.timeEnd('normal');
 
     return {
         position,
@@ -178,13 +172,4 @@ function loadImage(src: string): Promise<HTMLImageElement> {
         image.onload = () => resolve(image);
         image.onerror = reject;
     })
-}
-
-function print(arr: any, width: number) {
-    const lines = [];
-    for (let i = 0; i < arr.length / width; i ++) {
-        const line = arr.slice(width * i, width * (i + 1)).join(' ');
-        lines.push(line);
-    }
-    console.log('%c%s', 'font-size: 8px;', lines.join('\n'));
 }

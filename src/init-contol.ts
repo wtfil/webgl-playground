@@ -15,15 +15,15 @@ export function initControls(elem: HTMLElement) {
         } else if (pressed[']']) {
             dl = s;
         }
-        if (pressed.w) {
+        if (pressed.w && !pressed.s) {
             dy = 1;
-        } else if (pressed.s) {
+        } else if (pressed.s && !pressed.w) {
             dy = -1
         }
 
-        if (pressed.a) {
+        if (pressed.a && !pressed.d) {
             dx = -1;
-        } else if (pressed.d) {
+        } else if (pressed.d && !pressed.a) {
             dx = 1;
         }
 

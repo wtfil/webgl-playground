@@ -18,8 +18,8 @@ import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const CANVAS_WIDTH = 1024;
-const CANVAS_HEIGHT = 1024;
+const CANVAS_WIDTH = window.innerWidth / 2;
+const CANVAS_HEIGHT = window.innerHeight;
 
 const WATER_SIZE = 512;
 
@@ -94,13 +94,13 @@ async function setup() {
         center: Vec3.fromValues(-23.0, +20.0, 0.0),
         cameraPosition: Vec3.fromValues(-24.2, -254.7, +53.7),
 
-        directionalLightVector: Vec3.fromValues(0, 0, 1),
+        directionalLightVector: Vec3.fromValues(0, 0, -1),
         start: Date.now(),
         time: 0,
         renderWater: true,
         renderTerrain: true,
         useReflection: true,
-        useRefraction: true,
+        useRefraction: false,
         renderSun: true
     };
 
@@ -361,11 +361,10 @@ function drawScene(props: {
 
         const {model, projection} = createMatrices(properties);
         const translate = Vec3.create();
-        Vec3.normalize(translate, properties.directionalLightVector);
+        Vec3.sub(translate, translate, properties.directionalLightVector);
         Mat4.scale(model, model, [10, 10, 10]);
         Vec3.scale(translate, translate, 10);
         Mat4.translate(model, model, translate);
-        // Mat4.lookAt(projection, properties.cameraPosition, [0, 0, 100], [0, 0, 0]);
 
         gl.useProgram(sunProgram.program);
 
