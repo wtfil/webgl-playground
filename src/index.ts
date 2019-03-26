@@ -18,8 +18,8 @@ import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const CANVAS_WIDTH = 1024;
-const CANVAS_HEIGHT = 1024;
+const CANVAS_WIDTH = 512;
+const CANVAS_HEIGHT = 512;
 
 const WATER_SIZE = 512;
 
@@ -31,7 +31,7 @@ async function setup() {
     canvas.height = CANVAS_HEIGHT;
     const gl = canvas.getContext('experimental-webgl');
     if (!gl) {
-        console.warn('Can not create webgl context')
+        console.warn('Can not create webgl context');
         return;
     }
 
@@ -53,13 +53,13 @@ async function setup() {
         sunFragmentShaderSource
     )
     
-    const terrainData = await createTerrain('/heightmaps/mountain2.png', 500 / DETAILS_LEVEL, DETAILS_LEVEL);
+    const terrainData = await createTerrain('heightmaps/mountain2.png', 500 / DETAILS_LEVEL, DETAILS_LEVEL);
     const terrain = terrainData && createBuffers(gl, {
         arrays: terrainData
     });
 
-    const dudvTexture = await loadTexture(gl, '/textures/dudvmap.png');
-    const normalMapTexture = await loadTexture(gl, '/textures/normalmap.png');
+    const dudvTexture = await loadTexture(gl, 'textures/dudvmap.png');
+    const normalMapTexture = await loadTexture(gl, 'textures/normalmap.png');
     const [
         refractionTexture,
         refractionFramebuffer
