@@ -91,8 +91,9 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        center: Vec3.fromValues(-23.0, +20.0, 0.0),
-        cameraPosition: Vec3.fromValues(-24.2, -254.7, +53.7),
+        center: Vec3.fromValues(0, 0, 0),
+        cameraPosition: Vec3.fromValues(0, -260, 160),
+        upVector: Vec3.fromValues(0, 0, 1),
 
         directionalLightVector: Vec3.fromValues(0, 0, -1),
         start: Date.now(),
@@ -140,6 +141,11 @@ async function setup() {
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
+        .on('rotate', (e) => {
+            const {upVector} = properties;
+            Vec3.rotateZ(upVector, upVector, [0, 1, 1], e.rz);
+            updateProperties();
+        })
         .on('move', e => {
             const move = Vec3.fromValues(e.dx, e.dy, 0);
             const {cameraPosition, center} = properties;
@@ -147,7 +153,7 @@ async function setup() {
             Vec3.add(center, center, move);
             updateProperties();
         })
-        .on('rotate', e => {
+        .on('moveCamera', e => {
             const {cameraPosition, center} = properties;
             const distance = Vec3.distance(center, cameraPosition);
             const eye = Vec3.create();
@@ -225,7 +231,7 @@ function createMatrices(properties: ProgramProperties, flip: boolean = false) {
         eye = properties.cameraPosition;
     }
     Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
-    Mat4.lookAt(model, eye, properties.center, [0, 1, 0]);
+    Mat4.lookAt(model, eye, properties.center, properties.upVector);
     return {model, projection};
 }
 
@@ -247,10 +253,10 @@ function drawScene(props: {
         if (!properties.renderTerrain) {
             return;
         }
-        const {model, projection} = createMatrices(properties, flip);
+        const {projection, model} = createMatrices(properties, flip);
         // reflection
         if (flip) {
-            Mat4.translate(model, model, [0, 0, 2 * clipLevel * waterHeight]);
+            Mat4.translate(model, model, [0, 0,  2 *clipLevel * waterHeight]);
         }
 
         gl.useProgram(terrainProgram.program);

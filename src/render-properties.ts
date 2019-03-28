@@ -23,6 +23,11 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             value: arrToString(properties.cameraPosition)
         },
         {
+            title: 'up vector',
+            control: 'j k',
+            value: arrToString(properties.upVector)
+        },
+        {
             title: 'ligth',
             control: '[ ]',
             value: arrToString(properties.directionalLightVector)
