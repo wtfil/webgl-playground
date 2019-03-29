@@ -158,9 +158,14 @@ async function setup() {
             const distance = Vec3.distance(center, cameraPosition);
             const eye = Vec3.create();
             Vec3.sub(eye, cameraPosition, center);
-            Vec3.add(eye, eye, [e.dx, e.dy, 0]);
-            Vec3.normalize(eye, eye);
-            Vec3.scale(eye, eye, distance);
+            const proj = Vec3.clone(eye);
+            proj[2] = 0;
+            let angle = Vec3.angle(eye, proj) + e.dy * 1e-2;
+            angle = Math.min(angle, Math.PI * 0.3);
+            angle = Math.max(angle, 0.1);
+            proj[2] = distance * Math.sin(angle);
+            Vec3.copy(eye, proj);
+            Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
@@ -220,19 +225,21 @@ function createBuffers(
 
 function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     const projection = Mat4.create();
+    const view = Mat4.create();
     const model = Mat4.create();
     let eye: Vec3;
     if (flip) {
-        eye = Vec3.create();
-        Vec3.sub(eye, properties.cameraPosition, properties.center);
+        eye = Vec3.clone(properties.cameraPosition);
+        Vec3.sub(eye, eye, properties.center);
         eye[2] = -eye[2];
         Vec3.add(eye, eye, properties.center);
     } else {
         eye = properties.cameraPosition;
     }
+    // const eye = properties.cameraPosition;
     Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
-    Mat4.lookAt(model, eye, properties.center, properties.upVector);
-    return {model, projection};
+    Mat4.lookAt(view, eye, properties.center, properties.upVector);
+    return {model, projection, view};
 }
 
 function drawScene(props: {
@@ -253,10 +260,10 @@ function drawScene(props: {
         if (!properties.renderTerrain) {
             return;
         }
-        const {projection, model} = createMatrices(properties, flip);
+        const {projection, model, view} = createMatrices(properties, flip);
         // reflection
         if (flip) {
-            Mat4.translate(model, model, [0, 0,  2 *clipLevel * waterHeight]);
+            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
         }
 
         gl.useProgram(terrainProgram.program);
@@ -275,6 +282,11 @@ function drawScene(props: {
             terrainProgram.uniforms.model,
             false,
             model
+        );
+        gl.uniformMatrix4fv(
+            terrainProgram.uniforms.view,
+            false,
+            view
         );
 
         gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
@@ -311,7 +323,7 @@ function drawScene(props: {
         if (!properties.renderWater) {
             return;
         }
-        const {model, projection} = createMatrices(properties);
+        const {view, model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
         Mat4.scale(model, model, [WATER_SIZE, WATER_SIZE, 1]);
 
@@ -336,6 +348,12 @@ function drawScene(props: {
             waterProgram.uniforms.model,
             false,
             model
+        );
+
+        gl.uniformMatrix4fv(
+            waterProgram.uniforms.view,
+            false,
+            view
         );
 
         gl.activeTexture(gl.TEXTURE0);
@@ -365,7 +383,7 @@ function drawScene(props: {
             return;
         }
 
-        const {model, projection} = createMatrices(properties);
+        const {model, view, projection} = createMatrices(properties);
         const translate = Vec3.create();
         Vec3.sub(translate, translate, properties.directionalLightVector);
         Mat4.scale(model, model, [10, 10, 10]);
@@ -381,6 +399,12 @@ function drawScene(props: {
             sunProgram.uniforms.projection,
             false,
             projection
+        );
+
+        gl.uniformMatrix4fv(
+            sunProgram.uniforms.view,
+            false,
+            view
         );
 
         gl.uniformMatrix4fv(
