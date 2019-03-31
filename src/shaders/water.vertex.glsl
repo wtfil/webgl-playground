@@ -1,6 +1,7 @@
 attribute vec4 position;
 attribute vec2 textureCoord;
 
+uniform mat4 view;
 uniform mat4 model;
 uniform mat4 projection;
 uniform vec3 cameraPosition;
@@ -13,7 +14,7 @@ const lowp float tiling = 10.0;
 
 void main() {
     vec4 worldPosition = model * position;
-    gl_Position = clipSpace = projection * worldPosition;
+    gl_Position = clipSpace = projection * view * worldPosition;
 
     fromFragmentToCamera = cameraPosition - worldPosition.xyz;
     vTextureCoord = textureCoord * tiling;

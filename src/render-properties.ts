@@ -12,14 +12,14 @@ const arrToString = (arr: Float32Array) => {
 export function renderProperties(node: HTMLTableElement, properties: ProgramProperties) {
 
     const info = [
-        {
-            title: 'center',
-            control: 'a d w s',
-            value: arrToString(properties.center)
-        },
+        // {
+        //     title: 'center',
+        //     control: 'a d w s',
+        //     value: arrToString(properties.center)
+        // },
         {
             title: 'camera',
-            control: 'a d w s wheel',
+            control: 'a d w s wheel mouse',
             value: arrToString(properties.cameraPosition)
         },
         {

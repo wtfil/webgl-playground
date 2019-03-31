@@ -1,11 +1,4 @@
 export function createSun() {
-    /*
-    const position = [
-        50, 0, 100,
-        50, 100, 100,
-        150, 100, 100
-    ];
-    */
     const position = [];
     const indices = [];
     const R = 1;

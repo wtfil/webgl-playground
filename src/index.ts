@@ -12,16 +12,17 @@ import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSun} from './create-sun';
 import {renderProperties} from './render-properties';
-import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
+import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const CANVAS_WIDTH = 512;
-const CANVAS_HEIGHT = 512;
+const SIZE = Math.min(window.innerWidth / 2, window.innerHeight);
+const CANVAS_WIDTH = SIZE
+const CANVAS_HEIGHT = SIZE;
 
-const WATER_SIZE = 512;
+const WATER_SIZE = SIZE;
 
 const DETAILS_LEVEL = 5;
 
@@ -91,16 +92,16 @@ async function setup() {
     }
 
     const properties: ProgramProperties = {
-        center: Vec3.fromValues(-23.0, +20.0, 0.0),
-        cameraPosition: Vec3.fromValues(-24.2, -254.7, +53.7),
+        center: Vec3.fromValues(0, 0, 0),
+        cameraPosition: Vec3.fromValues(0, -260, 160),
 
-        directionalLightVector: Vec3.fromValues(0, 0, 1),
+        directionalLightVector: Vec3.fromValues(0, 0, -1),
         start: Date.now(),
         time: 0,
         renderWater: true,
         renderTerrain: true,
         useReflection: true,
-        useRefraction: true,
+        useRefraction: false,
         renderSun: true
     };
 
@@ -131,10 +132,7 @@ async function setup() {
             const {cameraPosition, center} = properties;
             const eye = Vec3.create();
             const distance = Vec3.distance(center, cameraPosition);
-            const nextDistance = distance + e.dy;
-            if (nextDistance <= 50 || nextDistance >= 300) {
-                return;
-            }
+            const nextDistance = inRange(distance + e.dy, 50, 500);
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
@@ -147,14 +145,21 @@ async function setup() {
             Vec3.add(center, center, move);
             updateProperties();
         })
-        .on('rotate', e => {
+        .on('moveCamera', e => {
             const {cameraPosition, center} = properties;
             const distance = Vec3.distance(center, cameraPosition);
             const eye = Vec3.create();
             Vec3.sub(eye, cameraPosition, center);
-            Vec3.add(eye, eye, [e.dx, e.dy, 0]);
-            Vec3.normalize(eye, eye);
-            Vec3.scale(eye, eye, distance);
+            const proj = Vec3.clone(eye);
+            proj[2] = 0;
+            const angle = inRange(
+                Vec3.angle(eye, proj) + e.dy * 1e-2,
+                0.1,
+                Math.PI / 3
+            );
+            proj[2] = distance * Math.sin(angle);
+            Vec3.copy(eye, proj);
+            Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
@@ -214,19 +219,20 @@ function createBuffers(
 
 function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     const projection = Mat4.create();
+    const view = Mat4.create();
     const model = Mat4.create();
     let eye: Vec3;
     if (flip) {
-        eye = Vec3.create();
-        Vec3.sub(eye, properties.cameraPosition, properties.center);
+        eye = Vec3.clone(properties.cameraPosition);
+        Vec3.sub(eye, eye, properties.center);
         eye[2] = -eye[2];
         Vec3.add(eye, eye, properties.center);
     } else {
         eye = properties.cameraPosition;
     }
     Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
-    Mat4.lookAt(model, eye, properties.center, [0, 1, 0]);
-    return {model, projection};
+    Mat4.lookAt(view, eye, properties.center, [0, 0, 1]);
+    return {model, projection, view};
 }
 
 function drawScene(props: {
@@ -247,15 +253,14 @@ function drawScene(props: {
         if (!properties.renderTerrain) {
             return;
         }
-        const {model, projection} = createMatrices(properties, flip);
+        const {projection, model, view} = createMatrices(properties, flip);
         // reflection
         if (flip) {
-            Mat4.translate(model, model, [0, 0, 2 * clipLevel * waterHeight]);
+            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
         }
 
         gl.useProgram(terrainProgram.program);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
-        // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
         bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
         bindBuffer(gl, terrain.buffers.colors, terrainProgram.attributes.colors, 4);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
@@ -270,14 +275,15 @@ function drawScene(props: {
             false,
             model
         );
+        gl.uniformMatrix4fv(
+            terrainProgram.uniforms.view,
+            false,
+            view
+        );
 
         gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
-
-        // gl.activeTexture(gl.TEXTURE0);
-        // gl.bindTexture(gl.TEXTURE_2D, terrain.textures.surface);
-        // gl.uniform1i(terrainProgram.uniforms.texture, 0);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -305,7 +311,7 @@ function drawScene(props: {
         if (!properties.renderWater) {
             return;
         }
-        const {model, projection} = createMatrices(properties);
+        const {view, model, projection} = createMatrices(properties);
         Mat4.translate(model, model, [0, 0, waterHeight]);
         Mat4.scale(model, model, [WATER_SIZE, WATER_SIZE, 1]);
 
@@ -330,6 +336,12 @@ function drawScene(props: {
             waterProgram.uniforms.model,
             false,
             model
+        );
+
+        gl.uniformMatrix4fv(
+            waterProgram.uniforms.view,
+            false,
+            view
         );
 
         gl.activeTexture(gl.TEXTURE0);
@@ -359,13 +371,12 @@ function drawScene(props: {
             return;
         }
 
-        const {model, projection} = createMatrices(properties);
+        const {model, view, projection} = createMatrices(properties);
         const translate = Vec3.create();
-        Vec3.normalize(translate, properties.directionalLightVector);
+        Vec3.sub(translate, translate, properties.directionalLightVector);
         Mat4.scale(model, model, [10, 10, 10]);
         Vec3.scale(translate, translate, 10);
         Mat4.translate(model, model, translate);
-        // Mat4.lookAt(projection, properties.cameraPosition, [0, 0, 100], [0, 0, 0]);
 
         gl.useProgram(sunProgram.program);
 
@@ -376,6 +387,12 @@ function drawScene(props: {
             sunProgram.uniforms.projection,
             false,
             projection
+        );
+
+        gl.uniformMatrix4fv(
+            sunProgram.uniforms.view,
+            false,
+            view
         );
 
         gl.uniformMatrix4fv(
@@ -400,11 +417,9 @@ function drawScene(props: {
         updateReflectionTexture();
         updateRefractionTexture();
     }
-    
-    gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     renderTerrain(0, false);
     renderWater();
     renderSun();
-
 }

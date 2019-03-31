@@ -2,6 +2,7 @@ attribute vec4 position;
 attribute vec3 normal;
 attribute vec4 colors;
 
+uniform mat4 view;
 uniform mat4 model;
 uniform mat4 projection;
 uniform vec3 directionalLightVector;
@@ -24,7 +25,7 @@ void main() {
   highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
   vLighting = ambientLight + (directionalLightColor * directional);
 
-  gl_Position = projection * model * position;
+  gl_Position = projection * view * model * position;
 
   fragmentColor = colors;
   if (clipLevel == 1.0) {

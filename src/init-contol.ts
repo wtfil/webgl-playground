@@ -15,20 +15,21 @@ export function initControls(elem: HTMLElement) {
         } else if (pressed[']']) {
             dl = s;
         }
-        if (pressed.w) {
+        if (pressed.w && !pressed.s) {
             dy = 1;
-        } else if (pressed.s) {
+        } else if (pressed.s && !pressed.w) {
             dy = -1
         }
 
-        if (pressed.a) {
+        if (pressed.a && !pressed.d) {
             dx = -1;
-        } else if (pressed.d) {
+        } else if (pressed.d && !pressed.a) {
             dx = 1;
         }
 
         if (dx || dy) {
-            ee.emit('move', { dx, dy });
+            // ee.emit('move', {dx, dy});
+            ee.emit('moveCamera', {dx, dy});
         }
 
         if (dl) {
@@ -82,7 +83,7 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mousemove', e => {
         const {movementX, movementY} = e;
         if (mousedown) {
-            ee.emit('rotate', {dx: -movementX, dy: movementY})
+            ee.emit('moveCamera', {dx: -movementX, dy: movementY})
         }
     })
     return ee;

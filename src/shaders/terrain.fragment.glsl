@@ -14,7 +14,7 @@ void main() {
   lowp float x = fragmentColor.x;
   lowp float groundGrassMixFactor = smoothstep(0.1, 0.2, x);
   lowp float grassSnowMixFactor = smoothstep(0.7, 0.8, x);
-  lowp float nothingGroundMixFactor = smoothstep(0.01, 0.015, x);
+  lowp float nothingGroundMixFactor = smoothstep(0.00, 0.015, x);
   lowp vec4 color = mix(groundColor, grassColor, groundGrassMixFactor);
   color = mix(color, snowColor, grassSnowMixFactor);
   color = mix(nothingColor, color, nothingGroundMixFactor);
