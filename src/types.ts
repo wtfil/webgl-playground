@@ -3,7 +3,6 @@ import {vec3 as Vec3} from 'gl-matrix';
 export interface ProgramProperties {
     center: Vec3;
     cameraPosition: Vec3,
-    upVector: Vec3,
     directionalLightVector: Vec3;
     renderSun: boolean;
     start: number;

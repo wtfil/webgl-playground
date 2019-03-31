@@ -9,7 +9,6 @@ export function initControls(elem: HTMLElement) {
         let dl = 0;
         let dx = 0;
         let dy = 0;
-        let rz = 0;
 
         if (pressed['[']) {
             dl = -s;
@@ -28,22 +27,13 @@ export function initControls(elem: HTMLElement) {
             dx = 1;
         }
 
-        if (pressed.j && !pressed.k) {
-            rz = -s;
-        } else if (pressed.k && !pressed.j) {
-            rz = s;
-        }
-
         if (dx || dy) {
-            ee.emit('move', {dx, dy});
+            // ee.emit('move', {dx, dy});
+            ee.emit('moveCamera', {dx, dy});
         }
 
         if (dl) {
             ee.emit('changeLight', {dl});
-        }
-
-        if (rz) {
-            ee.emit('rotate', {rz});
         }
 
         requestAnimationFrame(pullKeys);

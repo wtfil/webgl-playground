@@ -12,16 +12,17 @@ import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSun} from './create-sun';
 import {renderProperties} from './render-properties';
-import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer} from './utils';
+import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const CANVAS_WIDTH = window.innerWidth / 2;
-const CANVAS_HEIGHT = window.innerHeight;
+const SIZE = Math.min(window.innerWidth / 2, window.innerHeight);
+const CANVAS_WIDTH = SIZE
+const CANVAS_HEIGHT = SIZE;
 
-const WATER_SIZE = 512;
+const WATER_SIZE = SIZE;
 
 const DETAILS_LEVEL = 5;
 
@@ -93,7 +94,6 @@ async function setup() {
     const properties: ProgramProperties = {
         center: Vec3.fromValues(0, 0, 0),
         cameraPosition: Vec3.fromValues(0, -260, 160),
-        upVector: Vec3.fromValues(0, 0, 1),
 
         directionalLightVector: Vec3.fromValues(0, 0, -1),
         start: Date.now(),
@@ -132,18 +132,10 @@ async function setup() {
             const {cameraPosition, center} = properties;
             const eye = Vec3.create();
             const distance = Vec3.distance(center, cameraPosition);
-            const nextDistance = distance + e.dy;
-            if (nextDistance <= 50 || nextDistance >= 300) {
-                return;
-            }
+            const nextDistance = inRange(distance + e.dy, 50, 500);
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
-            updateProperties();
-        })
-        .on('rotate', (e) => {
-            const {upVector} = properties;
-            Vec3.rotateZ(upVector, upVector, [0, 1, 1], e.rz);
             updateProperties();
         })
         .on('move', e => {
@@ -160,9 +152,11 @@ async function setup() {
             Vec3.sub(eye, cameraPosition, center);
             const proj = Vec3.clone(eye);
             proj[2] = 0;
-            let angle = Vec3.angle(eye, proj) + e.dy * 1e-2;
-            angle = Math.min(angle, Math.PI * 0.3);
-            angle = Math.max(angle, 0.1);
+            const angle = inRange(
+                Vec3.angle(eye, proj) + e.dy * 1e-2,
+                0.1,
+                Math.PI / 3
+            );
             proj[2] = distance * Math.sin(angle);
             Vec3.copy(eye, proj);
             Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
@@ -236,9 +230,8 @@ function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     } else {
         eye = properties.cameraPosition;
     }
-    // const eye = properties.cameraPosition;
     Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
-    Mat4.lookAt(view, eye, properties.center, properties.upVector);
+    Mat4.lookAt(view, eye, properties.center, [0, 0, 1]);
     return {model, projection, view};
 }
 
@@ -268,7 +261,6 @@ function drawScene(props: {
 
         gl.useProgram(terrainProgram.program);
         bindBuffer(gl, terrain.buffers.position, terrainProgram.attributes.position, 3);
-        // bindBuffer(gl, terrain.buffers.texture, terrainProgram.attributes.textureCoord, 2);
         bindBuffer(gl, terrain.buffers.normal, terrainProgram.attributes.normal, 3);
         bindBuffer(gl, terrain.buffers.colors, terrainProgram.attributes.colors, 4);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
@@ -292,10 +284,6 @@ function drawScene(props: {
         gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
-
-        // gl.activeTexture(gl.TEXTURE0);
-        // gl.bindTexture(gl.TEXTURE_2D, terrain.textures.surface);
-        // gl.uniform1i(terrainProgram.uniforms.texture, 0);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -429,11 +417,9 @@ function drawScene(props: {
         updateReflectionTexture();
         updateRefractionTexture();
     }
-    
-    gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     renderTerrain(0, false);
     renderWater();
     renderSun();
-
 }

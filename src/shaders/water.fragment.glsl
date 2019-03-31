@@ -12,12 +12,11 @@ uniform int useReflection;
 uniform lowp vec3 directionalLightVector;
 
 const lowp float waterDistortionStrenth = 0.03;
-const lowp float distortionFactor = 0.0;
 const lowp float fresnelStrength = 1.5;
 const lowp float waterReflectivity = 0.5;
 const lowp vec3 sunlightColor = vec3(1.0, 1.0, 1.0);
 const lowp vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
-const lowp vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
+// const lowp vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
 const lowp float shineDamper = 20.0;
 
 void main() {
@@ -45,7 +44,6 @@ void main() {
     refractiveFactor = pow(refractiveFactor, fresnelStrength);
 
     // puting all together
-    totalDistortion *= distortionFactor;
     refractTexCoords += totalDistortion;
     reflectTexCoords += totalDistortion;
     // refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);

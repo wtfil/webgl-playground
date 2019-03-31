@@ -119,6 +119,7 @@ export function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attri
 export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
     const texture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
+    const renderbuffer = gl.createRenderbuffer() as WebGLRenderbuffer;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -133,6 +134,14 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+    gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+    gl.renderbufferStorage(
+        gl.RENDERBUFFER,
+        gl.DEPTH_COMPONENT16,
+        width,
+        height
+    );
+
     gl.framebufferTexture2D(
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
@@ -140,8 +149,23 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
         texture,
         0
     );
-
+    gl.framebufferRenderbuffer(
+        gl.FRAMEBUFFER,
+        gl.DEPTH_ATTACHMENT,
+        gl.RENDERBUFFER,
+        renderbuffer,
+    );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return [texture, framebuffer];
+}
+
+
+export function inRange(v: number, min: number, max: number): number {
+    if (v < min) {
+        return min;
+    } else if (v > max) {
+        return max;
+    }
+    return v;
 }
