@@ -1,4 +1,20 @@
+import Vec3 = require('gl-matrix/vec3');
 import {ProgramProperties} from './types';
+
+const DEFAULT_PROPERTIES: ProgramProperties = {
+    center: Vec3.fromValues(0, 0, 0),
+    cameraPosition: Vec3.fromValues(0, -260, 160),
+
+    directionalLightVector: Vec3.fromValues(0, 0, -1),
+    start: Date.now(),
+    time: 0,
+    renderWater: true,
+    renderTerrain: true,
+    useReflection: true,
+    useRefraction: false,
+    renderSun: true
+};
+const LOCALSTORAGE_KEY = 'wp-program-params';
 
 const arrToString = (arr: Float32Array) => {
     return Array.from(arr)
@@ -7,6 +23,27 @@ const arrToString = (arr: Float32Array) => {
             return sign + Math.abs(i).toFixed(1)
         })
         .join(', ')
+}
+
+export function initProperties(): ProgramProperties {
+    const item = localStorage.getItem(LOCALSTORAGE_KEY);
+    const properties = item ?
+        JSON.parse(item) :
+        DEFAULT_PROPERTIES;
+    return {
+        ...properties,
+        start: Date.now()
+    }
+}
+
+export function saveProperties(properties: ProgramProperties) {
+    const prepared = {
+        ...properties,
+        center: Array.from(properties.center),
+        cameraPosition: Array.from(properties.cameraPosition),
+        directionalLightVector: Array.from(properties.directionalLightVector),
+    }
+    localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(prepared));
 }
 
 export function renderProperties(node: HTMLTableElement, properties: ProgramProperties) {

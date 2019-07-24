@@ -6,5 +6,8 @@ uniform mat4 model;
 uniform mat4 projection;
 
 void main() {
-    gl_Position = projection * view * model * position;
+    vec4 worldPosition = model * position;
+    vec4 direction = normalize(position);
+    gl_Position = projection * view * worldPosition;
+    gl_Position.z = gl_Position.w; // ??
 }

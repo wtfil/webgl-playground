@@ -11,7 +11,7 @@ import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSun} from './create-sun';
-import {renderProperties} from './render-properties';
+import {renderProperties, initProperties, saveProperties} from './program-properties';
 import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
@@ -91,20 +91,7 @@ async function setup() {
         return;
     }
 
-    const properties: ProgramProperties = {
-        center: Vec3.fromValues(0, 0, 0),
-        cameraPosition: Vec3.fromValues(0, -260, 160),
-
-        directionalLightVector: Vec3.fromValues(0, 0, -1),
-        start: Date.now(),
-        time: 0,
-        renderWater: true,
-        renderTerrain: true,
-        useReflection: true,
-        useRefraction: false,
-        renderSun: true
-    };
-
+    const properties = initProperties();
     const emitter = initControls(canvas);
 
     emitter
@@ -170,6 +157,7 @@ async function setup() {
         })
     
     const updateProperties = () => {
+        saveProperties(properties);
         renderProperties(propertiesNode, properties);
     }
 
