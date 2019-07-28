@@ -26,6 +26,7 @@ export interface BufferObject {
 }
 export interface Program {
     program: WebGLProgram;
+    gl: WebGLRenderingContext;
     uniforms: {
         [key: string]: WebGLUniformLocation;
     },

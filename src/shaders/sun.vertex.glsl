@@ -1,13 +1,8 @@
-
 attribute vec4 position;
 
-uniform mat4 view;
-uniform mat4 model;
-uniform mat4 projection;
+uniform lowp vec3 sunPosition;
+uniform lowp mat4 view;
 
 void main() {
-    vec4 worldPosition = model * position;
-    vec4 direction = normalize(position);
-    gl_Position = projection * view * worldPosition;
-    gl_Position.z = gl_Position.w; // ??
+    gl_Position = vec4(position);
 }

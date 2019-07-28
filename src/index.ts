@@ -10,7 +10,7 @@ import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun} from './create-sun';
+import {createSun, getSunPosition} from './create-sun';
 import {renderProperties, initProperties, saveProperties} from './program-properties';
 import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
 
@@ -359,18 +359,35 @@ function drawScene(props: {
             return;
         }
 
-        const {model, view, projection} = createMatrices(properties);
-        const translate = Vec3.create();
-        Vec3.sub(translate, translate, properties.directionalLightVector);
-        Mat4.scale(model, model, [10, 10, 10]);
-        Vec3.scale(translate, translate, 10);
-        Mat4.translate(model, model, translate);
+        const {view, projection} = createMatrices(properties);
+        // const sunPosition = Vec3.fromValues(0, 1, 1);
+        // const sunPosition = properties.directionalLightVector;
+        const sunPosition = getSunPosition(properties.time);
+        // const translate = Vec3.create();
+        // Vec3.sub(translate, translate, properties.directionalLightVector);
+        // Mat4.scale(model, model, [10, 10, 10]);
+        // Vec3.scale(translate, translate, 10);
+        // Mat4.translate(model, model, translate);
 
         gl.useProgram(sunProgram.program);
 
         bindBuffer(gl, sun.buffers.position, sunProgram.attributes.position, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
 
+        gl.uniform1f(
+            sunProgram.uniforms.width,
+            sunProgram.gl.canvas.width
+        );
+
+        gl.uniform1f(
+            sunProgram.uniforms.height,
+            sunProgram.gl.canvas.height
+        );
+
+        gl.uniform3fv(
+            sunProgram.uniforms.sunPosition,
+            sunPosition
+        );
         gl.uniformMatrix4fv(
             sunProgram.uniforms.projection,
             false,
@@ -383,11 +400,11 @@ function drawScene(props: {
             view
         );
 
-        gl.uniformMatrix4fv(
-            sunProgram.uniforms.model,
-            false,
-            model
-        );
+        // gl.uniformMatrix4fv(
+        //     sunProgram.uniforms.model,
+        //     false,
+        //     model
+        // );
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

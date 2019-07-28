@@ -88,7 +88,7 @@ export function createProgram(
         uniforms[name] = gl.getUniformLocation(program, name) as WebGLUniformLocation;
     }
 
-    return {program, uniforms, attributes};
+    return {program, uniforms, attributes, gl};
 }
 
 export function createBuffer(gl: WebGLRenderingContext, type: number, data: Float32Array | Uint16Array) {
