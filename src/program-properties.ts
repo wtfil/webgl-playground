@@ -41,7 +41,6 @@ export function saveProperties(properties: ProgramProperties) {
         ...properties,
         center: Array.from(properties.center),
         cameraPosition: Array.from(properties.cameraPosition),
-        directionalLightVector: Array.from(properties.directionalLightVector),
     }
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(prepared));
 }
@@ -49,20 +48,10 @@ export function saveProperties(properties: ProgramProperties) {
 export function renderProperties(node: HTMLTableElement, properties: ProgramProperties) {
 
     const info = [
-        // {
-        //     title: 'center',
-        //     control: 'a d w s',
-        //     value: arrToString(properties.center)
-        // },
         {
             title: 'camera',
             control: 'a d w s wheel mouse',
             value: arrToString(properties.cameraPosition)
-        },
-        {
-            title: 'ligth',
-            control: '[ ]',
-            value: arrToString(properties.directionalLightVector)
         },
         {
             title: 'terrain',
