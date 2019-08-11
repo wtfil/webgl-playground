@@ -5,7 +5,7 @@ const DEFAULT_PROPERTIES: ProgramProperties = {
     center: Vec3.fromValues(0, 0, 0),
     cameraPosition: Vec3.fromValues(0, -260, 160),
 
-    directionalLightVector: Vec3.fromValues(0, 0, -1),
+    sunPosition: Vec3.fromValues(0, 0, -1),
     start: Date.now(),
     time: 0,
     renderWater: true,

@@ -1,3 +1,5 @@
+import Vec3 = require('gl-matrix/vec3');
+
 export function createSun() {
     const s = 1;
     const position = [
@@ -31,9 +33,5 @@ export function getSunPosition(t: number) {
     const x = R * cos(epsilon) * cos(lambda);
     const y = R * cos(epsilon) * sin(lambda);
     const z = R * sin(epsilon);
-    return [x / 2 + 0.5, y / 2 + 0.5, 1];
-    // return [0.5, 0.5, 1];
-    // return [x, y, z];
-    // return [x, y, 1];
-    // return [0.5 + x / 2, Math.max(Math.abs(y), 0.5), 1];
+    return Vec3.fromValues(x / 2 + 0.5, y / 2 + 0.5, z);
 }

@@ -4,20 +4,20 @@ uniform lowp vec3 sunPosition;
 
 varying lowp vec3 sunViewPosition;
 
+const lowp float PI = 3.1415926535897932384626433832795;
+const lowp float PI_2 = 1.57079632679489661923;
+const lowp vec4 sunColorInner = vec4(0.89, 0.40, 0.00, 1.00);
+const lowp vec4 sunColorOuter = vec4(0.95, 0.77, 0.35, 1.00);
+
 void main() {
     lowp vec2 fragCoord = vec2(
         gl_FragCoord.x / width,
         gl_FragCoord.y / height
     );
-    lowp float d = distance(sunViewPosition.xy, fragCoord);
-    lowp float scale = 0.1;
-    lowp float edge = 0.3;
-    if (step(scale, d) == 1.0) {
-        gl_FragColor = vec4(0.0);
-    } else if (step(scale * edge, d) == 1.0) {
-        lowp float alpha = sqrt(1.0 - smoothstep(scale * edge, scale, d));
-        gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
-    } else {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    }
+    highp float sunSize = 0.1;
+    highp float sunToFragment = distance(sunViewPosition.xy, fragCoord);
+    highp float colorFactor = smoothstep(0.0, sunSize, pow(sunToFragment, 1.0));
+    highp float alpha = 0.5 - atan((sunToFragment - sunSize) * 10.0) / PI;
+    gl_FragColor = mix(sunColorInner, sunColorOuter, colorFactor);
+    gl_FragColor.a = alpha;
 }
