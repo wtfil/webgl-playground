@@ -235,6 +235,7 @@ function drawScene(props: {
 }) {
     
     const waterHeight = 50 / DETAILS_LEVEL;
+    const scale = 1;
     const {gl, terrainProgram, waterProgram, sunProgram, properties, terrain, water, sun} = props;
 
     const renderTerrain = (clipLevel: -1 | 1 | 0, flip: boolean) => {
@@ -242,9 +243,10 @@ function drawScene(props: {
             return;
         }
         const {projection, model, view} = createMatrices(properties, flip);
+        Mat4.scale(model, model, [scale, scale, scale]);
         // reflection
         if (flip) {
-            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
+            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * scale * 2]);
         }
 
         gl.useProgram(terrainProgram.program);
@@ -270,7 +272,7 @@ function drawScene(props: {
         );
 
         gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
-        gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
+        gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight / scale);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
         gl.enable(gl.BLEND);
@@ -359,7 +361,7 @@ function drawScene(props: {
             return;
         }
 
-        const {view, projection} = createMatrices(properties);
+        const {projection, view} = createMatrices(properties);
         // const sunPosition = Vec3.fromValues(0, 1, 1);
         // const sunPosition = properties.directionalLightVector;
         const sunPosition = getSunPosition(properties.time);
@@ -368,6 +370,11 @@ function drawScene(props: {
         // Mat4.scale(model, model, [10, 10, 10]);
         // Vec3.scale(translate, translate, 10);
         // Mat4.translate(model, model, translate);
+        // const view = Mat4.create();
+        // Mat4.lookAt(view, properties.cameraPosition, properties.center, [0, 0, 1]);
+        // console.log(view);;
+        // Mat4.invert(view, view);
+        // Mat4.fromYRotation(view, properties.time / 10000);
 
         gl.useProgram(sunProgram.program);
 
@@ -424,7 +431,7 @@ function drawScene(props: {
     }
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    renderSun();
     renderTerrain(0, false);
     renderWater();
-    renderSun();
 }

@@ -1,14 +1,23 @@
-uniform lowp vec3 sunPosition;
 uniform lowp float height;
 uniform lowp float width;
+uniform lowp vec3 sunPosition;
+
+varying lowp vec3 sunViewPosition;
 
 void main() {
-    lowp vec3 fragCoord = vec3(
+    lowp vec2 fragCoord = vec2(
         gl_FragCoord.x / width,
-        gl_FragCoord.y / height,
-        gl_FragCoord.z
+        gl_FragCoord.y / height
     );
-    lowp float d = distance(sunPosition, fragCoord);
-    lowp float f = 1.0 - step(1.0, d);   
-    gl_FragColor = vec4(f, f, f, 1.0);
+    lowp float d = distance(sunViewPosition.xy, fragCoord);
+    lowp float scale = 0.1;
+    lowp float edge = 0.3;
+    if (step(scale, d) == 1.0) {
+        gl_FragColor = vec4(0.0);
+    } else if (step(scale * edge, d) == 1.0) {
+        lowp float alpha = sqrt(1.0 - smoothstep(scale * edge, scale, d));
+        gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
+    } else {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
 }
