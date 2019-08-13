@@ -22,7 +22,7 @@ const SIZE = Math.min(window.innerWidth / 2, window.innerHeight);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 
-const WATER_SIZE = SIZE;
+const WATER_SIZE = SIZE * 2;
 
 const DETAILS_LEVEL = 5;
 
@@ -206,7 +206,7 @@ function createBuffers(
     }
 }
 
-function createMatrices(properties: ProgramProperties, flip: boolean = false) {
+function createMatrices(properties: ProgramProperties, flip: boolean = false, far: number = 1000) {
     const projection = Mat4.create();
     const view = Mat4.create();
     const model = Mat4.create();
@@ -219,7 +219,7 @@ function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     } else {
         eye = properties.cameraPosition;
     }
-    Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
+    Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, far);
     Mat4.lookAt(view, eye, properties.center, [0, 0, 1]);
     return {model, projection, view};
 }
@@ -362,7 +362,7 @@ function drawScene(props: {
             return;
         }
 
-        const {projection, view} = createMatrices(properties);
+        const {projection, view} = createMatrices(properties, false, 2000);
         const sunPosition = getSunPosition(properties.time);
         gl.useProgram(sunProgram.program);
 
