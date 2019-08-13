@@ -119,7 +119,7 @@ async function setup() {
             const {cameraPosition, center} = properties;
             const eye = Vec3.create();
             const distance = Vec3.distance(center, cameraPosition);
-            const nextDistance = inRange(distance + e.dy, 50, 500);
+            const nextDistance = inRange(distance + e.dy, 50, 1000);
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
@@ -150,11 +150,6 @@ async function setup() {
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
-        // .on('changeLight', e => {
-        //     const {directionalLightVector} = properties;
-        //     Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], e.dl);
-        //     updateProperties();
-        // })
     
     const updateProperties = () => {
         saveProperties(properties);
@@ -164,6 +159,7 @@ async function setup() {
     function render() {
         properties.time = Date.now() - properties.start;
         properties.sunPosition = getSunPosition(properties.time);
+        updateProperties();
         drawScene({
             gl: gl!,
             terrainProgram: terrainProgram!,
@@ -206,7 +202,7 @@ function createBuffers(
     }
 }
 
-function createMatrices(properties: ProgramProperties, flip: boolean = false, far: number = 1000) {
+function createMatrices(properties: ProgramProperties, flip: boolean = false, far: number = 2000) {
     const projection = Mat4.create();
     const view = Mat4.create();
     const model = Mat4.create();
@@ -244,6 +240,8 @@ function drawScene(props: {
             return;
         }
         const {projection, model, view} = createMatrices(properties, flip);
+        const directionalLightVector = Vec3.create();
+        Vec3.negate(directionalLightVector, properties.sunPosition);
         Mat4.scale(model, model, [scale, scale, scale]);
         // reflection
         if (flip) {
@@ -272,7 +270,7 @@ function drawScene(props: {
             view
         );
 
-        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.sunPosition);
+        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight / scale);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
@@ -362,8 +360,7 @@ function drawScene(props: {
             return;
         }
 
-        const {projection, view} = createMatrices(properties, false, 2000);
-        const sunPosition = getSunPosition(properties.time);
+        const {projection, view, model} = createMatrices(properties, false, 5000);
         gl.useProgram(sunProgram.program);
 
         bindBuffer(gl, sun.buffers.position, sunProgram.attributes.position, 3);
@@ -381,7 +378,7 @@ function drawScene(props: {
 
         gl.uniform3fv(
             sunProgram.uniforms.sunPosition,
-            sunPosition
+            properties.sunPosition
         );
         gl.uniformMatrix4fv(
             sunProgram.uniforms.projection,
@@ -393,6 +390,12 @@ function drawScene(props: {
             sunProgram.uniforms.view,
             false,
             view
+        );
+
+        gl.uniformMatrix4fv(
+            sunProgram.uniforms.model,
+            false,
+            model
         );
 
         gl.enable(gl.BLEND);

@@ -54,6 +54,10 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             value: arrToString(properties.cameraPosition)
         },
         {
+            title: 'sun position',
+            value: arrToString(properties.sunPosition)
+        },
+        {
             title: 'terrain',
             control: '1',
             value: properties.renderTerrain
@@ -77,7 +81,7 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             title: 'render sun disk',
             control: '5',
             value: properties.renderSun
-        }
+        },
     ];
     const columns = ['title', 'control', 'value'];
     const body = node.querySelector('tbody')!;
