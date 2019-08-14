@@ -40,8 +40,8 @@ export function createSun() {
 
 export function getSunPosition(t: number) {
     const n = t * 1e-3;
-    const x = - cos(n);
-    const y = 0;
+    const x = cos(n);
+    const y = cos(n);
     const z = sin(n);
     return Vec3.fromValues(x, y, z);
 }
