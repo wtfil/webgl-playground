@@ -1,6 +1,6 @@
 import Vec3 = require('gl-matrix/vec3');
 
-const {cos, sin, PI} = Math;
+const {cos, sin, tan, PI} = Math;
 
 export function createSun() {
     const c = 50;
@@ -37,11 +37,34 @@ export function createSun() {
 }
 
 
-export function getSunPosition(t: number) {
-    const altitude = t * .8e-3;
-    const azimuth = altitude;
-    const x = sin(azimuth) * cos(altitude);
-    const y = sin(azimuth) * sin(altitude);
-    const z = cos(azimuth);
-    return Vec3.fromValues(x, y, z);
+
+/**
+ * @see ./bin/sun-positon-regression.js
+ */
+
+function getAzimuth(t: number) {
+    return 7.344052639206152e-8 * t - 0.1829595519336553;
+}
+function getAltitude(t: number) {
+    return tan(-4.83049e-16 * t * t + 4.21414e-8 * t - 0.420437);
+}
+
+const DAY_SPEED = 1e-3;
+
+export function getSunPosition(n: number) {
+    const t = (n * DAY_SPEED) % 24 * 3600 * 1000;
+    const minutes = Math.ceil(t / 60 / 1000);
+    const m = minutes % 60;
+    const h = Math.floor(minutes / 60);
+    const altitude = getAltitude(t);
+    const azimuth = getAzimuth(t);
+    const x = cos(altitude) * cos(azimuth);
+    const y = cos(altitude) * sin(azimuth);
+    const z = sin(altitude);
+    return {
+        sunTime: `${h}:${m}`,
+        altitude,
+        azimuth,
+        sunPosition: Vec3.fromValues(x, -y, z)
+    };
 }

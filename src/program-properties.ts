@@ -49,13 +49,25 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
 
     const info = [
         {
+            title: 'sun position',
+            value: arrToString(properties.sunPosition)
+        },
+        {
+            title: 'sun time',
+            value: properties.sunTime
+        },
+        {
+            title: 'altitude',
+            value: (properties.altitude! * 180 / Math.PI).toFixed(2)
+        },
+        {
+            title: 'azimuth',
+            value: (properties.azimuth! * 180 / Math.PI).toFixed(2)
+        },
+        {
             title: 'camera',
             control: 'a d w s wheel mouse',
             value: arrToString(properties.cameraPosition)
-        },
-        {
-            title: 'sun position',
-            value: arrToString(properties.sunPosition)
         },
         {
             title: 'terrain',

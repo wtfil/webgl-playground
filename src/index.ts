@@ -157,8 +157,11 @@ async function setup() {
     }
 
     function render() {
-        properties.time = Date.now() - properties.start;
-        properties.sunPosition = getSunPosition(properties.time);
+        const time = Date.now() - properties.start;
+        Object.assign(properties, {
+            time,
+            ...getSunPosition(time)
+        });
         updateProperties();
         drawScene({
             gl: gl!,
@@ -241,6 +244,7 @@ function drawScene(props: {
         const {projection, model, view} = createMatrices(properties, flip);
         const directionalLightVector = Vec3.create();
         Vec3.negate(directionalLightVector, properties.sunPosition);
+        Vec3.copy(directionalLightVector, properties.sunPosition);
         // reflection
         if (flip) {
             Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
@@ -360,25 +364,12 @@ function drawScene(props: {
 
         const domeRadius = 2000;
         const {projection, view, model} = createMatrices(properties, false, domeRadius * 2);
-        // const inverseViewProj = Mat4.create();
-        // Mat4.mul(inverseViewProj, view, projection);
-        // Mat4.invert(inverseViewProj, inverseViewProj);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(sunProgram.program);
 
         bindBuffer(gl, sun.buffers.position, sunProgram.attributes.position, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
-
-        // gl.uniform1f(
-        //     sunProgram.uniforms.width,
-        //     sunProgram.gl.canvas.width
-        // );
-
-        // gl.uniform1f(
-        //     sunProgram.uniforms.height,
-        //     sunProgram.gl.canvas.height
-        // );
 
         gl.uniform1f(
             sunProgram.uniforms.domeRadius,
@@ -406,12 +397,6 @@ function drawScene(props: {
             false,
             model
         );
-
-        // gl.uniformMatrix4fv(
-        //     sunProgram.uniforms.inverseViewProj,
-        //     false,
-        //     inverseViewProj
-        // );
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

@@ -11,6 +11,10 @@ export interface ProgramProperties {
     renderTerrain: boolean;
     useRefraction: boolean;
     useReflection: boolean;
+
+    sunTime?: string;
+    azimuth?: number;
+    altitude?: number;
 }
 export interface BufferObject {
     buffers: {
