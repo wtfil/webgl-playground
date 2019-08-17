@@ -10,8 +10,8 @@ import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun} from './create-sun';
-import {renderProperties} from './render-properties';
+import {createSun, getSunPosition} from './create-sun';
+import {renderProperties, initProperties, saveProperties} from './program-properties';
 import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
 
 import {ProgramProperties, BufferObject, Program} from './types';
@@ -22,7 +22,7 @@ const SIZE = Math.min(window.innerWidth / 2, window.innerHeight);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 
-const WATER_SIZE = SIZE;
+const WATER_SIZE = SIZE * 2;
 
 const DETAILS_LEVEL = 5;
 
@@ -91,20 +91,7 @@ async function setup() {
         return;
     }
 
-    const properties: ProgramProperties = {
-        center: Vec3.fromValues(0, 0, 0),
-        cameraPosition: Vec3.fromValues(0, -260, 160),
-
-        directionalLightVector: Vec3.fromValues(0, 0, -1),
-        start: Date.now(),
-        time: 0,
-        renderWater: true,
-        renderTerrain: true,
-        useReflection: true,
-        useRefraction: false,
-        renderSun: true
-    };
-
+    const properties = initProperties();
     const emitter = initControls(canvas);
 
     emitter
@@ -132,7 +119,7 @@ async function setup() {
             const {cameraPosition, center} = properties;
             const eye = Vec3.create();
             const distance = Vec3.distance(center, cameraPosition);
-            const nextDistance = inRange(distance + e.dy, 50, 500);
+            const nextDistance = inRange(distance + e.dy, 50, 1000);
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
@@ -163,18 +150,19 @@ async function setup() {
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
-        .on('changeLight', e => {
-            const {directionalLightVector} = properties;
-            Vec3.rotateZ(directionalLightVector, directionalLightVector, [0, 1, 1], e.dl);
-            updateProperties();
-        })
     
     const updateProperties = () => {
+        saveProperties(properties);
         renderProperties(propertiesNode, properties);
     }
 
     function render() {
-        properties.time = Date.now() - properties.start;
+        const time = Date.now() - properties.start;
+        Object.assign(properties, {
+            time,
+            ...getSunPosition(time)
+        });
+        updateProperties();
         drawScene({
             gl: gl!,
             terrainProgram: terrainProgram!,
@@ -217,7 +205,7 @@ function createBuffers(
     }
 }
 
-function createMatrices(properties: ProgramProperties, flip: boolean = false) {
+function createMatrices(properties: ProgramProperties, flip: boolean = false, far: number = 2000) {
     const projection = Mat4.create();
     const view = Mat4.create();
     const model = Mat4.create();
@@ -230,7 +218,7 @@ function createMatrices(properties: ProgramProperties, flip: boolean = false) {
     } else {
         eye = properties.cameraPosition;
     }
-    Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, 1000.0);
+    Mat4.perspective(projection, 45 * Math.PI / 180, CANVAS_WIDTH / CANVAS_HEIGHT, 0.1, far);
     Mat4.lookAt(view, eye, properties.center, [0, 0, 1]);
     return {model, projection, view};
 }
@@ -254,6 +242,9 @@ function drawScene(props: {
             return;
         }
         const {projection, model, view} = createMatrices(properties, flip);
+        const directionalLightVector = Vec3.create();
+        Vec3.negate(directionalLightVector, properties.sunPosition);
+        Vec3.copy(directionalLightVector, properties.sunPosition);
         // reflection
         if (flip) {
             Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
@@ -281,7 +272,7 @@ function drawScene(props: {
             view
         );
 
-        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
+        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
@@ -325,7 +316,7 @@ function drawScene(props: {
         gl.uniform1i(waterProgram.uniforms.useReflection, Number(properties.useReflection));
         gl.uniform3fv(waterProgram.uniforms.center, properties.center);
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
-        gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.directionalLightVector);
+        gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.sunPosition);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
@@ -371,18 +362,24 @@ function drawScene(props: {
             return;
         }
 
-        const {model, view, projection} = createMatrices(properties);
-        const translate = Vec3.create();
-        Vec3.sub(translate, translate, properties.directionalLightVector);
-        Mat4.scale(model, model, [10, 10, 10]);
-        Vec3.scale(translate, translate, 10);
-        Mat4.translate(model, model, translate);
+        const domeRadius = 2000;
+        const {projection, view, model} = createMatrices(properties, false, domeRadius * 2);
+        Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(sunProgram.program);
 
         bindBuffer(gl, sun.buffers.position, sunProgram.attributes.position, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
 
+        gl.uniform1f(
+            sunProgram.uniforms.domeRadius,
+            domeRadius
+        );
+
+        gl.uniform3fv(
+            sunProgram.uniforms.sunPosition,
+            properties.sunPosition
+        );
         gl.uniformMatrix4fv(
             sunProgram.uniforms.projection,
             false,
@@ -419,7 +416,7 @@ function drawScene(props: {
     }
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    renderSun();
     renderTerrain(0, false);
     renderWater();
-    renderSun();
 }

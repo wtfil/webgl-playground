@@ -32,6 +32,15 @@ module.exports = {
     ],
     devServer: {
         contentBase: path.join(__dirname, 'public'),
+        stats: {
+            modules: false,
+            assets: false,
+            children: false,
+            builtAt: false,
+            entrypoints: false
+        },
+        disableHostCheck: true,
+        host: '0.0.0.0',
         port: 8090
     }
 };

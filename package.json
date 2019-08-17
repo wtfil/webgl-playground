@@ -19,5 +19,6 @@
     "events": "^3.0.0",
     "gl-matrix": "^3.0.0",
     "typescript": "^3.2.2"
-  }
+  },
+  "license": "MIT"
 }

@@ -1,4 +1,20 @@
+import Vec3 = require('gl-matrix/vec3');
 import {ProgramProperties} from './types';
+
+const DEFAULT_PROPERTIES: ProgramProperties = {
+    center: Vec3.fromValues(0, 0, 0),
+    cameraPosition: Vec3.fromValues(0, -260, 160),
+
+    sunPosition: Vec3.fromValues(0, 0, -1),
+    start: Date.now(),
+    time: 0,
+    renderWater: true,
+    renderTerrain: true,
+    useReflection: true,
+    useRefraction: false,
+    renderSun: true
+};
+const LOCALSTORAGE_KEY = 'wp-program-params';
 
 const arrToString = (arr: Float32Array) => {
     return Array.from(arr)
@@ -9,23 +25,49 @@ const arrToString = (arr: Float32Array) => {
         .join(', ')
 }
 
+export function initProperties(): ProgramProperties {
+    const item = localStorage.getItem(LOCALSTORAGE_KEY);
+    const properties = item ?
+        JSON.parse(item) :
+        DEFAULT_PROPERTIES;
+    return {
+        ...properties,
+        start: Date.now()
+    }
+}
+
+export function saveProperties(properties: ProgramProperties) {
+    const prepared = {
+        ...properties,
+        center: Array.from(properties.center),
+        cameraPosition: Array.from(properties.cameraPosition),
+    }
+    localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(prepared));
+}
+
 export function renderProperties(node: HTMLTableElement, properties: ProgramProperties) {
 
     const info = [
-        // {
-        //     title: 'center',
-        //     control: 'a d w s',
-        //     value: arrToString(properties.center)
-        // },
+        {
+            title: 'sun position',
+            value: arrToString(properties.sunPosition)
+        },
+        {
+            title: 'sun time',
+            value: properties.sunTime
+        },
+        {
+            title: 'altitude',
+            value: (properties.altitude! * 180 / Math.PI).toFixed(2)
+        },
+        {
+            title: 'azimuth',
+            value: (properties.azimuth! * 180 / Math.PI).toFixed(2)
+        },
         {
             title: 'camera',
             control: 'a d w s wheel mouse',
             value: arrToString(properties.cameraPosition)
-        },
-        {
-            title: 'ligth',
-            control: '[ ]',
-            value: arrToString(properties.directionalLightVector)
         },
         {
             title: 'terrain',
@@ -51,7 +93,7 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             title: 'render sun disk',
             control: '5',
             value: properties.renderSun
-        }
+        },
     ];
     const columns = ['title', 'control', 'value'];
     const body = node.querySelector('tbody')!;

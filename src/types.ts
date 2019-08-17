@@ -3,7 +3,7 @@ import {vec3 as Vec3} from 'gl-matrix';
 export interface ProgramProperties {
     center: Vec3;
     cameraPosition: Vec3,
-    directionalLightVector: Vec3;
+    sunPosition: Vec3;
     renderSun: boolean;
     start: number;
     time: number;
@@ -11,6 +11,10 @@ export interface ProgramProperties {
     renderTerrain: boolean;
     useRefraction: boolean;
     useReflection: boolean;
+
+    sunTime?: string;
+    azimuth?: number;
+    altitude?: number;
 }
 export interface BufferObject {
     buffers: {
@@ -26,6 +30,7 @@ export interface BufferObject {
 }
 export interface Program {
     program: WebGLProgram;
+    gl: WebGLRenderingContext;
     uniforms: {
         [key: string]: WebGLUniformLocation;
     },

@@ -1,10 +1,12 @@
-
 attribute vec4 position;
 
-uniform mat4 view;
-uniform mat4 model;
-uniform mat4 projection;
+uniform lowp mat4 view;
+uniform lowp mat4 model;
+uniform lowp mat4 projection;
+
+varying lowp vec4 worldPosition;
 
 void main() {
-    gl_Position = projection * view * model * position;
+    worldPosition = model * position;
+    gl_Position = projection * view * worldPosition;
 }
