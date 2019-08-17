@@ -18,7 +18,7 @@ import {ProgramProperties, BufferObject, Program} from './types';
 
 window.addEventListener('load', setup);
 
-const SIZE = Math.min(window.innerWidth / 2, window.innerHeight);
+const SIZE = Math.min(window.innerWidth, window.innerHeight);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 
