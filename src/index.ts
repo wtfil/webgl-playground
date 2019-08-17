@@ -152,15 +152,20 @@ async function setup() {
         })
     
     const updateProperties = () => {
-        saveProperties(properties);
+        // saveProperties(properties);
         renderProperties(propertiesNode, properties);
     }
 
     function render() {
         const time = Date.now() - properties.start;
+        const {sunPosition, ...rest} = getSunPosition(time);
+        const directionalLightVector = Vec3.create();
+        Vec3.negate(directionalLightVector, sunPosition);
         Object.assign(properties, {
             time,
-            ...getSunPosition(time)
+            sunPosition,
+            directionalLightVector,
+            ...rest
         });
         updateProperties();
         drawScene({
@@ -242,9 +247,6 @@ function drawScene(props: {
             return;
         }
         const {projection, model, view} = createMatrices(properties, flip);
-        const directionalLightVector = Vec3.create();
-        Vec3.negate(directionalLightVector, properties.sunPosition);
-        Vec3.copy(directionalLightVector, properties.sunPosition);
         // reflection
         if (flip) {
             Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
@@ -272,7 +274,7 @@ function drawScene(props: {
             view
         );
 
-        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, directionalLightVector);
+        gl.uniform3fv(terrainProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniform1f(terrainProgram.uniforms.clipZ, waterHeight);
         gl.uniform1f(terrainProgram.uniforms.clipLevel, clipLevel);
 
@@ -316,7 +318,7 @@ function drawScene(props: {
         gl.uniform1i(waterProgram.uniforms.useReflection, Number(properties.useReflection));
         gl.uniform3fv(waterProgram.uniforms.center, properties.center);
         gl.uniform3fv(waterProgram.uniforms.cameraPosition, properties.cameraPosition);
-        gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.sunPosition);
+        gl.uniform3fv(waterProgram.uniforms.directionalLightVector, properties.directionalLightVector);
         gl.uniformMatrix4fv(
             waterProgram.uniforms.projection,
             false,
