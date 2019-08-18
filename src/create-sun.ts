@@ -34,7 +34,7 @@ function createRender(context: Context) {
         cameraPosition: Vec3,
         center: Vec3,
         aspect: number,
-        sunPosition: Vec3
+        sunPosition: Vec3,
     }) {
         const domeRadius = 2000;
         const {gl, program, sun} = context;
@@ -135,7 +135,7 @@ function getAltitude(t: number) {
     return tan(-4.83049e-16 * t * t + 4.21414e-8 * t - 0.420437);
 }
 
-const DAY_SPEED = 2e-3;
+const DAY_SPEED = 4e-3;
 
 export function getSunPosition(n: number) {
     const t = (n * DAY_SPEED) % 24 * 3600 * 1000;

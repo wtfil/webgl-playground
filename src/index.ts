@@ -1,23 +1,19 @@
-import Mat4 = require('gl-matrix/mat4');
 import Vec3 = require('gl-matrix/vec3');
 
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSun, getSunPosition} from './create-sun';
-import {renderProperties, initProperties, saveProperties} from './program-properties';
-import {createFramebufferAndTexture, createProgram, loadTexture, createBuffer, bindBuffer, inRange} from './utils';
-
-import {ProgramProperties, BufferObject, Program, Unpacked} from './types';
+import {renderProperties, initProperties} from './program-properties';
+import {inRange} from './utils';
+import {ProgramProperties, Unpacked} from './types';
 
 window.addEventListener('load', setup);
 
 const SIZE = Math.min(window.innerWidth, window.innerHeight);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
-
 const WATER_SIZE = SIZE * 2;
-
 const DETAILS_LEVEL = 5;
 
 async function setup() {
@@ -76,13 +72,6 @@ async function setup() {
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
-            updateProperties();
-        })
-        .on('move', e => {
-            const move = Vec3.fromValues(e.dx, e.dy, 0);
-            const {cameraPosition, center} = properties;
-            Vec3.add(cameraPosition, cameraPosition, move);
-            Vec3.add(center, center, move);
             updateProperties();
         })
         .on('moveCamera', e => {
