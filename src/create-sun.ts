@@ -1,8 +1,97 @@
 import Vec3 = require('gl-matrix/vec3');
+import Mat4 = require('gl-matrix/mat4');
+import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer} from './utils';
+
+import sunVertextShaderSource from './shaders/sun.vertex.glsl';
+import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
+import {Program, BufferObject} from './types';
 
 const {cos, sin, tan, PI} = Math;
 
-export function createSun() {
+interface Context {
+    gl: WebGLRenderingContext,
+    program: Program,
+    sun: BufferObject
+}
+
+export function createSun(gl: WebGLRenderingContext) {
+    const program = createProgram(
+        gl,
+        sunVertextShaderSource,
+        sunFragmentShaderSource
+    )
+    const sun = bindArraysToBuffers(gl, {
+        arrays: createArrays()
+    });
+    const context = {gl, sun, program};
+    return {
+        render: createRender(context)
+    }
+}
+
+function createRender(context: Context) {
+    return function render(opts: {
+        cameraPosition: Vec3,
+        center: Vec3,
+        aspect: number,
+        sunPosition: Vec3
+    }) {
+        const domeRadius = 2000;
+        const {gl, program, sun} = context;
+        const {
+            cameraPosition,
+            center,
+            aspect,
+            sunPosition
+        } = opts;
+        const {projection, model, view} = createMatrices({
+            cameraPosition,
+            center,
+            aspect,
+            far: domeRadius * 2
+        });
+        Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
+
+        gl.useProgram(program.program);
+
+        bindBuffer(gl, sun.buffers.position, program.attributes.position, 3);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
+
+        gl.uniform1f(
+            program.uniforms.domeRadius,
+            domeRadius
+        );
+
+        gl.uniform3fv(
+            program.uniforms.sunPosition,
+            sunPosition
+        );
+        gl.uniformMatrix4fv(
+            program.uniforms.projection,
+            false,
+            projection
+        );
+
+        gl.uniformMatrix4fv(
+            program.uniforms.view,
+            false,
+            view
+        );
+
+        gl.uniformMatrix4fv(
+            program.uniforms.model,
+            false,
+            model
+        );
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
+        gl.disable(gl.BLEND);
+    }
+}
+
+function createArrays() {
     const c = 50;
     const position = [];
     const indices = [];
@@ -35,8 +124,6 @@ export function createSun() {
     
     return {position, indices};
 }
-
-
 
 /**
  * @see ./bin/sun-positon-regression.js

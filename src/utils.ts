@@ -1,4 +1,6 @@
-import {Program} from './types';
+import Mat4 = require('gl-matrix/mat4');
+import Vec3 = require('gl-matrix/vec3');
+import {Program, BufferObject} from './types';
 
 function createShader(gl: WebGLRenderingContext, type: number, source: string) {
     const shader = gl.createShader(type);
@@ -56,15 +58,14 @@ export function createProgram(
     gl: WebGLRenderingContext,
     vertextShaderSource: string,
     fragmentShaderSource: string,
-): Program | null {
+): Program {
 
     const vertexShader = createShader(gl,  gl.VERTEX_SHADER, vertextShaderSource);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
     const program = gl.createProgram();
 
     if (!program || !vertexShader || !fragmentShader) {
-        console.warn('Failed to create shader program');
-        return null;
+        throw new Error('Failed to create shader program');
     }
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
@@ -72,7 +73,7 @@ export function createProgram(
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         console.warn(gl.getProgramInfoLog(program));
-        return null;
+        throw new Error('Can not creat program');
     }
     const attributes: Program['attributes'] = {};
     const uniforms: Program['uniforms'] = {};
@@ -89,6 +90,36 @@ export function createProgram(
     }
 
     return {program, uniforms, attributes, gl};
+}
+
+export function createMatrices(opts: {
+    cameraPosition: Vec3,
+    center: Vec3,
+    aspect: number,
+    flip?: boolean,
+    far?: number
+}) {
+    const projection = Mat4.create();
+    const view = Mat4.create();
+    const model = Mat4.create();
+    let eye: Vec3;
+    if (opts.flip) {
+        eye = Vec3.clone(opts.cameraPosition);
+        Vec3.sub(eye, eye, opts.center);
+        eye[2] = -eye[2];
+        Vec3.add(eye, eye, opts.center);
+    } else {
+        eye = opts.cameraPosition;
+    }
+    Mat4.perspective(
+        projection,
+        Math.PI / 4,
+        opts.aspect,
+        0.1,
+        opts.far || 2000
+    );
+    Mat4.lookAt(view, eye, opts.center, [0, 0, 1]);
+    return {model, projection, view};
 }
 
 export function createBuffer(gl: WebGLRenderingContext, type: number, data: Float32Array | Uint16Array) {
@@ -114,6 +145,32 @@ export function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attri
     );
     gl.enableVertexAttribArray(attribute);
 }
+
+export function bindArraysToBuffers(
+    gl: WebGLRenderingContext,
+    opts: {
+        arrays: {
+            [key: string]: number[]
+        },
+        textures?: BufferObject['textures'],
+        framebuffers?: BufferObject['framebuffers']
+    }
+): BufferObject {
+    const {arrays, textures = {}, framebuffers = {}} = opts;
+    return {
+        buffers: {
+            position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
+            colors: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.colors)),
+            indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(arrays.indices)),
+            normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.normals)),
+            texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
+        },
+        textures,
+        framebuffers,
+        size: arrays.indices.length
+    }
+}
+
 
 
 export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {

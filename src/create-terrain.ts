@@ -1,13 +1,115 @@
+import Mat4 = require('gl-matrix/mat4');
 import Vec3 = require('gl-matrix/vec3');
 
-export async function createTerrain(src: string, maxHeight: number, size: number) {
+import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer} from './utils';
+
+import terrainVertextShaderSource from './shaders/terrain.vertex.glsl';
+import terrainFragmentShaderSource from './shaders/terrain.fragment.glsl';
+import {Program, BufferObject} from './types';
+
+interface Context {
+    gl: WebGLRenderingContext,
+    program: Program,
+    terrain: BufferObject
+}
+
+export async function createTerrain(
+    gl: WebGLRenderingContext,
+    opts: {
+        heatmap: string,
+        height: number,
+        size: number
+    }
+) {
+    const arrays = await createArrays(opts.heatmap, opts.height, opts.size);
+    const program = createProgram(
+        gl,
+        terrainVertextShaderSource,
+        terrainFragmentShaderSource
+    );
+    const terrain = bindArraysToBuffers(gl, {
+        arrays
+    });
+
+    const context = {terrain, gl, program};
+
+    return {
+        render: createRender(context)
+    }
+}
+
+function createRender(context: Context) {
+    return function render(opts: {
+        cameraPosition: Vec3,
+        center: Vec3,
+        aspect: number,
+        clipLevel: -1 | 1 | 0,
+        waterHeight: number,
+        flip: boolean,
+        directionalLightVector: Vec3
+    }) {
+        const {gl, terrain, program} = context;
+        const {
+            cameraPosition,
+            center,
+            aspect,
+            clipLevel,
+            flip,
+            waterHeight,
+            directionalLightVector
+        } = opts;
+        const {projection, model, view} = createMatrices({
+            cameraPosition,
+            center,
+            aspect,
+            flip
+        });
+        // reflection
+        if (opts.flip) {
+            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
+        }
+
+        gl.useProgram(program.program);
+        bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);
+        bindBuffer(gl, terrain.buffers.normal, program.attributes.normal, 3);
+        bindBuffer(gl, terrain.buffers.colors, program.attributes.colors, 4);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
+
+        gl.uniformMatrix4fv(
+            program.uniforms.projection,
+            false,
+            projection
+        );
+        gl.uniformMatrix4fv(
+            program.uniforms.model,
+            false,
+            model
+        );
+        gl.uniformMatrix4fv(
+            program.uniforms.view,
+            false,
+            view
+        );
+
+        gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
+        gl.uniform1f(program.uniforms.clipZ, waterHeight);
+        gl.uniform1f(program.uniforms.clipLevel, clipLevel);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
+        gl.disable(gl.BLEND);
+    }
+}
+
+async function createArrays(src: string, maxHeight: number, size: number) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
     canvas.width = image.width;
     canvas.height = image.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        return;
+        throw new Error('Can not create 2d context');
     }
     ctx.drawImage(image, 0, 0);
     const {data} = ctx.getImageData(0, 0, image.width, image.height);
