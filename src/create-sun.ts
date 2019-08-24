@@ -35,6 +35,7 @@ function createRender(context: Context) {
         center: Vec3,
         aspect: number,
         sunPosition: Vec3,
+        flip?: boolean
     }) {
         const domeRadius = 2000;
         const {gl, program, sun} = context;
@@ -42,12 +43,14 @@ function createRender(context: Context) {
             cameraPosition,
             center,
             aspect,
-            sunPosition
+            sunPosition,
+            flip = false
         } = opts;
         const {projection, model, view} = createMatrices({
             cameraPosition,
             center,
             aspect,
+            flip,
             far: domeRadius * 2
         });
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);

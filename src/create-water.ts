@@ -87,7 +87,6 @@ function createRender(context: Context) {
         cameraPosition: Vec3,
         center: Vec3,
         aspect: number,
-        waterHeight: number,
         directionalLightVector: Vec3,
         time: number,
         useRefraction: boolean,
@@ -104,7 +103,6 @@ function createRender(context: Context) {
             center,
             aspect,
             time,
-            waterHeight,
             useReflection,
             useRefraction,
             directionalLightVector
@@ -114,7 +112,7 @@ function createRender(context: Context) {
             center,
             aspect
         });
-        Mat4.translate(model, model, [0, 0, waterHeight]);
+        
         Mat4.scale(model, model, [size, size, 1]);
 
         gl.useProgram(program.program);

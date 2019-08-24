@@ -18,10 +18,11 @@ export async function createTerrain(
     opts: {
         heatmap: string,
         height: number,
-        size: number
+        size: number,
+        baseLevel?: number
     }
 ) {
-    const arrays = await createArrays(opts.heatmap, opts.height, opts.size);
+    const arrays = await createArrays(opts.heatmap, opts.height, opts.size, opts.baseLevel);
     const program = createProgram(
         gl,
         terrainVertextShaderSource,
@@ -43,9 +44,9 @@ function createRender(context: Context) {
         cameraPosition: Vec3,
         center: Vec3,
         aspect: number,
-        clipLevel: -1 | 1 | 0,
-        waterHeight: number,
-        flip: boolean,
+        clipDirection?: -1 | 1 | 0,
+        clipLevel?: number,
+        flip?: boolean,
         directionalLightVector: Vec3
     }) {
         const {gl, terrain, program} = context;
@@ -53,9 +54,9 @@ function createRender(context: Context) {
             cameraPosition,
             center,
             aspect,
-            clipLevel,
-            flip,
-            waterHeight,
+            clipDirection = 0,
+            clipLevel = 0,
+            flip = false,
             directionalLightVector
         } = opts;
         const {projection, model, view} = createMatrices({
@@ -66,7 +67,7 @@ function createRender(context: Context) {
         });
         // reflection
         if (opts.flip) {
-            Mat4.translate(model, model, [0, 0,  clipLevel * waterHeight * 2]);
+            Mat4.translate(model, model, [0, 0,  clipDirection * clipLevel * 2]);
         }
 
         gl.useProgram(program.program);
@@ -92,7 +93,7 @@ function createRender(context: Context) {
         );
 
         gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
-        gl.uniform1f(program.uniforms.clipZ, waterHeight);
+        gl.uniform1f(program.uniforms.clipDirection, clipDirection);
         gl.uniform1f(program.uniforms.clipLevel, clipLevel);
 
         gl.enable(gl.BLEND);
@@ -102,7 +103,7 @@ function createRender(context: Context) {
     }
 }
 
-async function createArrays(src: string, maxHeight: number, size: number) {
+async function createArrays(src: string, maxHeight: number, size: number, baseLevel: number = 0) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
     canvas.width = image.width;
@@ -150,7 +151,7 @@ async function createArrays(src: string, maxHeight: number, size: number) {
             position.push(
                 j - width / 2,
                 i - height / 2,
-                heatmap[k]
+                heatmap[k] - baseLevel
             );
             colors.push(c, c, c, 1)
 

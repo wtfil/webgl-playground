@@ -6,7 +6,7 @@ uniform mat4 view;
 uniform mat4 model;
 uniform mat4 projection;
 uniform vec3 directionalLightVector;
-uniform float clipZ;
+uniform float clipDirection;
 uniform float clipLevel;
 
 varying highp vec3 vLighting;
@@ -28,10 +28,10 @@ void main() {
   gl_Position = projection * view * model * position;
 
   fragmentColor = colors;
-  if (clipLevel == 1.0) {
-    shouldClip = position.z > clipZ ? 1.0 : 0.0;
-  } else if (clipLevel == -1.0) {
-    shouldClip = position.z < clipZ ? 1.0 : 0.0;
+  if (clipDirection == 1.0) {
+    shouldClip = position.z > clipLevel ? 1.0 : 0.0;
+  } else if (clipDirection == -1.0) {
+    shouldClip = position.z < clipLevel ? 1.0 : 0.0;
   } else {
     shouldClip = 0.0;
   }

@@ -31,7 +31,8 @@ async function setup() {
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/mountain2.png',
         height: 500 / DETAILS_LEVEL,
-        size: DETAILS_LEVEL
+        size: DETAILS_LEVEL,
+        baseLevel: 50 / DETAILS_LEVEL
     });
 
     const water = await createWater(gl, {
@@ -137,8 +138,6 @@ function drawScene(props: {
     water: Unpacked<ReturnType<typeof createWater>>,
     sun: Unpacked<ReturnType<typeof createSun>>
 }) {
-    
-    const waterHeight = 50 / DETAILS_LEVEL;
     const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
     const {
         gl,
@@ -164,22 +163,22 @@ function drawScene(props: {
             if (properties.renderTerrain) {
                 terrain.render({
                     ...opts,
-                    waterHeight,
-                    clipLevel: -1,
-                    flip: true,
+                    clipDirection: -1,
+                    flip: true
                 })
             }
             if (properties.renderSun) {
-                sun.render(opts);
+                sun.render({
+                    ...opts,
+                    flip: true
+                });
             }
         })
         water.updateRefractionTexture(() => {
             if (properties.renderTerrain) {
                 terrain.render({
                     ...opts,
-                    waterHeight,
-                    clipLevel: 1,
-                    flip: false,
+                    clipDirection: 1
                 })
             }
         });
@@ -190,18 +189,10 @@ function drawScene(props: {
     if (properties.renderSun) {
         sun.render(opts);
     }
-    if (properties.renderTerrain) {
-        terrain.render({
-            ...opts,
-            waterHeight,
-            clipLevel: 0,
-            flip: false,
-        })
-    }
     if (properties.renderWater) {
-        water.render({
-            ...opts,
-            waterHeight
-        });
+        water.render(opts);
+    }
+    if (properties.renderTerrain) {
+        terrain.render(opts)
     }
 }
