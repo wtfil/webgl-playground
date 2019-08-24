@@ -1,13 +1,15 @@
 import Vec3 = require('gl-matrix/vec3');
 import {ProgramProperties} from './types';
+import {sunTimeToString} from './create-sun';
 
 const DEFAULT_PROPERTIES: ProgramProperties = {
     center: Vec3.fromValues(0, 0, 0),
-    cameraPosition: Vec3.fromValues(678, 115, 69),
+    cameraPosition: Vec3.fromValues(478, 494, 69),
 
     directionalLightVector: Vec3.fromValues(0, 0, -1),
     sunPosition: Vec3.fromValues(0, 0, -1),
     start: Date.now(),
+    sunTime: 9 * 3600 * 1000,
     time: 0,
     renderWater: true,
     renderTerrain: true,
@@ -55,7 +57,7 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
         },
         {
             title: 'sun time',
-            value: properties.sunTime
+            value: sunTimeToString(properties.sunTime)
         },
         {
             title: 'altitude',

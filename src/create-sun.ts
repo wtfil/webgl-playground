@@ -137,18 +137,25 @@ function getAltitude(t: number) {
 
 const DAY_SPEED = 4e-3;
 
-export function getSunPosition(n: number) {
-    const t = (n * DAY_SPEED) % 24 * 3600 * 1000;
+function pad2(st: string | number) {
+    return ('00' + st).slice(-2);
+}
+
+export function sunTimeToString(t: number) {
     const minutes = Math.ceil(t / 60 / 1000);
     const m = minutes % 60;
     const h = Math.floor(minutes / 60);
+    return `${pad2(h)}:${pad2(m)}`;
+}
+
+export function getSunPosition(n: number) {
+    const t = n % (24 * 3600 * 1000);
     const altitude = getAltitude(t) / 2;
     const azimuth = getAzimuth(t);
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
     const z = sin(altitude);
     return {
-        sunTime: `${h}:${m}`,
         altitude,
         azimuth,
         sunPosition: Vec3.fromValues(x, -y, z)

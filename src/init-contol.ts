@@ -5,9 +5,9 @@ export function initControls(elem: HTMLElement) {
     const ee = new EventEmitter();
     const pressed: {[key: string]: boolean} = {};
     const pullKeys = () => {
-        const s = 0.01;
         let dx = 0;
         let dy = 0;
+        let ds = 0; 
 
         if (pressed.w && !pressed.s) {
             dy = 1;
@@ -21,8 +21,17 @@ export function initControls(elem: HTMLElement) {
             dx = 1;
         }
 
+        if (pressed.j && !pressed.k) {
+            ds -= 1000 * 60;
+        } else if (pressed.k && !pressed.j) {
+            ds += 1000 * 60;
+        }
+
         if (dx || dy) {
             ee.emit('moveCamera', {dx, dy});
+        }
+        if (ds) {
+            ee.emit('moveSun', {ds});
         }
 
         requestAnimationFrame(pullKeys);

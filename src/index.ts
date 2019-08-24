@@ -92,6 +92,10 @@ async function setup() {
             Vec3.add(cameraPosition, center, eye);
             updateProperties();
         })
+        .on('moveSun', e => {
+            properties.sunTime += e.ds;
+            updateProperties();
+        })
     
     const updateProperties = () => {
         // saveProperties(properties);
@@ -100,14 +104,15 @@ async function setup() {
 
     function render() {
         const time = Date.now() - properties.start;
-        const {sunPosition, ...rest} = getSunPosition(time);
+        const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
         const directionalLightVector = Vec3.create();
         Vec3.negate(directionalLightVector, sunPosition);
         Object.assign(properties, {
             time,
             sunPosition,
             directionalLightVector,
-            ...rest
+            azimuth,
+            altitude
         });
         updateProperties();
         drawScene({
