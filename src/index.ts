@@ -95,6 +95,12 @@ async function setup() {
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
+            const DAY = 24 * 3600 * 1000;
+            if (properties.sunTime < 0) {
+                properties.sunTime += DAY;
+            } else if (properties.sunTime > DAY) {
+                properties.sunTime -= DAY;
+            }
             updateProperties();
         })
     

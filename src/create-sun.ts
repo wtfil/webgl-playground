@@ -8,6 +8,11 @@ import {Program, BufferObject} from './types';
 
 const {cos, sin, tan, PI} = Math;
 
+// shader constants
+const wavelengthPowMinus4 = [680, 550, 440].map(l => Math.pow(l * 1e-9, -4));
+const earthRadius = 6371e3;
+const atmospereRadius = 6471e3;
+
 interface Context {
     gl: WebGLRenderingContext,
     program: Program,
@@ -37,7 +42,7 @@ function createRender(context: Context) {
         sunPosition: Vec3,
         flip?: boolean
     }) {
-        const domeRadius = 2000;
+        const domeRadius = 1000;
         const {gl, program, sun} = context;
         const {
             cameraPosition,
@@ -69,6 +74,12 @@ function createRender(context: Context) {
             program.uniforms.sunPosition,
             sunPosition
         );
+
+        gl.uniform3fv(
+            program.uniforms.cameraPosition,
+            cameraPosition
+        );
+
         gl.uniformMatrix4fv(
             program.uniforms.projection,
             false,
@@ -86,6 +97,20 @@ function createRender(context: Context) {
             false,
             model
         );
+
+        gl.uniform3fv(
+            program.uniforms.wavelengthPowMinus4,
+            wavelengthPowMinus4
+        );
+        gl.uniform1f(
+            program.uniforms.earthRadius,
+            earthRadius
+        );
+        gl.uniform1f(
+            program.uniforms.atmospereRadius,
+            atmospereRadius
+        );
+
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

@@ -1,17 +1,116 @@
 uniform lowp float domeRadius;
 uniform lowp vec3 sunPosition;
+uniform lowp vec3 cameraPosition;
+uniform lowp vec3 wavelengthPowMinus4;
+uniform lowp float earchRadius;
+uniform lowp float atmosphereRadius;
+
+const lowp float si = 22.0; // sun intencity
+
+const lowp float rsh = 8e3; // Raylish scale height
+const lowp float msh = 1.2e3; // Mei scale height
+
+const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
+const lowp float msc = 21e-6; // Mei scattering coefficient
+
+const lowp float gr = 0.0; // Raylish simetry constant
+const lowp float gm = -0.75; // Mei simetry constant
 
 varying lowp vec4 worldPosition;
 
-const lowp float PI = 3.1415926535897932384626433832795;
-const lowp float PI_2 = 1.57079632679489661923;
-const lowp vec4 daySkyColor = vec4(0.67, 0.96, 0.98, 1.00);
-const lowp vec4 nigthSkyColor = vec4(0.0, 0.0, 0.0, 1.0);
-const lowp vec4 sunColorInner = vec4(0.89, 0.40, 0.00, 1.00);
-const lowp vec4 sunColorOuter = vec4(0.95, 0.77, 0.35, 1.00);
-const lowp float maxSunHeight = 0.2;
+const int samples = 5;
+
+// https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
+lowp float phase(
+    lowp float g,
+    lowp float cosT
+) {
+    lowp float g2 = g * g;
+    return 3.0 * (1.0 - g2)  * (1.0 + cosT * cosT) / 2.0 / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * cosT, 1.5);
+}
+
+void main() {
+    // lowp vec3 camera = normalize(cameraPosition) / 20.0;
+    // lowp vec3 camera = vec3(0.0);
+    lowp vec3 camera = sunPosition;
+    lowp vec3 world = normalize(worldPosition.xyz);
+    lowp vec3 ray = camera - world;
+    lowp float far = length(ray);
+    lowp float costT = dot(ray, sunPosition);
+    lowp float pr = phase(gr, costT);
+    lowp float pm = phase(gm, costT);
+    // lowp vec3 sampleRay = (cam - ray) / float(samples);
+
+    lowp vec3 totalR = vec3(0.0); // total Raylish scattering
+    lowp vec3 totalM = vec3(0.0); // total Mei scattering
+    lowp float odr = 0.0; // optical depth for Raylish phase
+    lowp float odm = 0.0; // optical depth for Mei phase
+    lowp float stepSize = far / float(samples);
+    lowp vec3 samplePoint = camera;
+    lowp vec3 rayStep = ray / float(samples);
+
+    for (int i = 0; i < samples; i ++) {
+        lowp float height = length(samplePoint) * (atmosphereRadius - earchRadius) * sunPosition.z;
+        lowp float odrStep = exp(-height / rsh) * stepSize;
+        lowp float odmStep = exp(-height / msh) * stepSize;
+
+        odr += odrStep;
+        odm += odmStep;
+
+        lowp vec3 attn = exp(-rsc * odr - msc * odm);
+        totalR += odrStep * attn;
+        totalM += odmStep * attn;
+        samplePoint += rayStep;
+    }
+
+    lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM);
+    color = 1.0 - exp(-color);
+
+    gl_FragColor = vec4(color, 1.0);
+}
+
+// const lowp float PI = 3.1415926535897932384626433832795;
+// const lowp float PI_2 = 1.57079632679489661923;
+// const lowp vec4 daySkyColor = vec4(0.67, 0.96, 0.98, 1.00);
+// const lowp vec4 nigthSkyColor = vec4(0.0, 0.0, 0.0, 1.0);
+// const lowp vec4 sunColorInner = vec4(0.89, 0.40, 0.00, 1.00);
+// const lowp vec4 sunColorOuter = vec4(0.95, 0.77, 0.35, 1.00);
+// const lowp float maxSunHeight = 0.2;
+
+// https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
+// refractive index of air
+// const lowp float  n = 1.00029;
+// // the molecular number density of the standard atmosphere. This is the number of molecules per cubic metre;
+// const lowp float N = 2.504e25;
+// // scale height
+// const lowp float H = 8500.0;
+// const lowp float rayleighScatteringEquationConstant = pow(PI * (n * n - 1.0), 2.0) / 2.0 / N;
+// const lowp float rayleighScatteringCoefficientConstant = 8.0 * pow(PI, 3.0) * pow(n * n - 1.0, 2.0) / 3.0 / N;
+
+// const lowp float lambdaRed = 680.0e-9;
+// const lowp float lambdaGreen = 550.0e-9;
+// const lowp float lambdaBlue = 440.0e-9;
 
 
+
+// lowp float rayleighScatteringEquation(
+//     lowp float lambda, // the wavelength of the incoming light;
+//     lowp float theta, // the scattering angle;
+//     lowp float h // the altitude of the point;
+// ) {
+//     lowp float p = exp(-h / H);
+//     return rayleighScatteringEquationConstant * p / pow(lambda, 4.0) * (1.0 + pow(cos(theta), 2.0));
+// }
+
+// lowp float rayleighScatteringCoefficient(
+//     lowp float lambda, // the wavelength of the incoming light;
+//     lowp float h // the altitude of the point;
+// ) {
+//     lowp float p = exp(-h / H);
+//     return rayleighScatteringCoefficientConstant * p / pow(lambda, 4.0);
+// }
+
+/*
 void main() {
     lowp float sunSize = 150.0;
     lowp float sunToFragment = distance(sunPosition * domeRadius, worldPosition.xyz);
@@ -25,4 +124,14 @@ void main() {
 
     lowp vec4 sunColor = mix(sunColorInner, sunColorOuter, colorFactor);
     gl_FragColor = mix(skyColor, sunColor, alpha);
+    lowp float theta = acos(dot(
+        normalize(worldPosition.xyz),
+        normalize(sunPosition)
+    ));
+    lowp float r = rayleighScatteringEquation(lambdaRed, theta, H);
+    lowp float g = rayleighScatteringEquation(lambdaGreen, theta, H);
+    lowp float b = rayleighScatteringEquation(lambdaBlue, theta, H);
+    gl_FragColor = vec4(vec3(r, g, b), 1.0);
+    gl_FragColor = vec4(0.0);
 }
+*/

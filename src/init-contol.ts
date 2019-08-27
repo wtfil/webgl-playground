@@ -22,9 +22,9 @@ export function initControls(elem: HTMLElement) {
         }
 
         if (pressed.j && !pressed.k) {
-            ds -= 1000 * 60;
+            ds -= 1000 * 360;
         } else if (pressed.k && !pressed.j) {
-            ds += 1000 * 60;
+            ds += 1000 * 360;
         }
 
         if (dx || dy) {
