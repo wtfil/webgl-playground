@@ -23,48 +23,50 @@ const int samples = 5;
 // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
 lowp float phase(
     lowp float g,
-    lowp float cosT
+    lowp float a
 ) {
     lowp float g2 = g * g;
-    return 3.0 * (1.0 - g2)  * (1.0 + cosT * cosT) / 2.0 / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * cosT, 1.5);
+    return 3.0 * (1.0 - g2)  * (1.0 + a * a) / 2.0 / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * a, 1.5);
 }
 
 void main() {
     // lowp vec3 camera = normalize(cameraPosition) / 20.0;
     // lowp vec3 camera = vec3(0.0);
-    lowp vec3 camera = sunPosition;
-    lowp vec3 world = normalize(worldPosition.xyz);
-    lowp vec3 ray = camera - world;
+    lowp vec3 camera = vec3(0.0);
+    lowp vec3 position = normalize(worldPosition.xyz);
+    lowp vec3 ray = normalize(position - camera);
     lowp float far = length(ray);
-    lowp float costT = dot(ray, sunPosition);
-    lowp float pr = phase(gr, costT);
-    lowp float pm = phase(gm, costT);
+    lowp float lightAngle = dot(position, sunPosition);
+    lowp float pr = phase(gr, lightAngle);
+    lowp float pm = phase(gm, lightAngle);
     // lowp vec3 sampleRay = (cam - ray) / float(samples);
 
     lowp vec3 totalR = vec3(0.0); // total Raylish scattering
     lowp vec3 totalM = vec3(0.0); // total Mei scattering
     lowp float odr = 0.0; // optical depth for Raylish phase
     lowp float odm = 0.0; // optical depth for Mei phase
-    lowp float stepSize = far / float(samples);
-    lowp vec3 samplePoint = camera;
+    lowp float sampleSize = far / float(samples);
+    lowp vec3 samplePoint = camera + sampleSize * ray * 0.5;
     lowp vec3 rayStep = ray / float(samples);
 
     for (int i = 0; i < samples; i ++) {
-        lowp float height = length(samplePoint) * (atmosphereRadius - earchRadius) * sunPosition.z;
-        lowp float odrStep = exp(-height / rsh) * stepSize;
-        lowp float odmStep = exp(-height / msh) * stepSize;
+        lowp float height = length(samplePoint) * (atmosphereRadius - earchRadius);
+        lowp float odrStep = exp(-height / rsh) * sampleSize;
+        lowp float odmStep = exp(-height / msh) * sampleSize;
 
         odr += odrStep;
         odm += odmStep;
 
         lowp vec3 attn = exp(-rsc * odr - msc * odm);
+        // lowp vec3 attn = vec3(1.0);
         totalR += odrStep * attn;
         totalM += odmStep * attn;
-        samplePoint += rayStep;
+        samplePoint += ray * sampleSize;
     }
 
-    lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM);
-    color = 1.0 - exp(-color);
+    // lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e4;
+    lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e3;
+    // color = 1.0 - exp(-color);
 
     gl_FragColor = vec4(color, 1.0);
 }

@@ -42,7 +42,7 @@ function createRender(context: Context) {
         sunPosition: Vec3,
         flip?: boolean
     }) {
-        const domeRadius = 1000;
+        const domeRadius = 3000;
         const {gl, program, sun} = context;
         const {
             cameraPosition,
