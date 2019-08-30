@@ -1,12 +1,11 @@
 uniform lowp float domeRadius;
 uniform lowp vec3 sunPosition;
 uniform lowp vec3 cameraPosition;
-uniform lowp vec3 wavelengthPowMinus4;
-uniform lowp float earchRadius;
-uniform lowp float atmosphereRadius;
 
 const lowp float si = 22.0; // sun intencity
 
+const lowp float earthRadius = 6371e3;
+const lowp float atmosphereRadius = 6471e3;
 const lowp float rsh = 8e3; // Raylish scale height
 const lowp float msh = 1.2e3; // Mei scale height
 
@@ -30,43 +29,42 @@ lowp float phase(
 }
 
 void main() {
-    // lowp vec3 camera = normalize(cameraPosition) / 20.0;
-    // lowp vec3 camera = vec3(0.0);
-    lowp vec3 camera = vec3(0.0);
-    lowp vec3 position = normalize(worldPosition.xyz);
+    lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
+    lowp vec3 position = normalize(worldPosition.xyz) * atmosphereRadius;
     lowp vec3 ray = normalize(position - camera);
-    lowp float far = length(ray);
-    lowp float lightAngle = dot(position, sunPosition);
-    lowp float pr = phase(gr, lightAngle);
-    lowp float pm = phase(gm, lightAngle);
-    // lowp vec3 sampleRay = (cam - ray) / float(samples);
+    lowp float far = length(position - camera);
+    lowp float lightAngle = dot(normalize(position), normalize(sunPosition));
+    lowp float rshPhase = phase(gr, lightAngle);
+    lowp float meiPhase = phase(gm, lightAngle);
 
-    lowp vec3 totalR = vec3(0.0); // total Raylish scattering
-    lowp vec3 totalM = vec3(0.0); // total Mei scattering
-    lowp float odr = 0.0; // optical depth for Raylish phase
-    lowp float odm = 0.0; // optical depth for Mei phase
+    lowp vec3 rshScattering = vec3(0.0); // total Raylish scattering
+    lowp vec3 meiScattering = vec3(0.0); // total Mei scattering
+    lowp float rshOpticalDepth = 0.0; // optical depth for Raylish phase
+    lowp float meiOpticalDepth = 0.0; // optical depth for Mei phase
     lowp float sampleSize = far / float(samples);
     lowp vec3 samplePoint = camera + sampleSize * ray * 0.5;
-    lowp vec3 rayStep = ray / float(samples);
 
     for (int i = 0; i < samples; i ++) {
-        lowp float height = length(samplePoint) * (atmosphereRadius - earchRadius);
-        lowp float odrStep = exp(-height / rsh) * sampleSize;
-        lowp float odmStep = exp(-height / msh) * sampleSize;
+        lowp float height = length(samplePoint) - earthRadius;
+        lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
+        // lowp float odmStep = exp(-height / msh) * sampleSize;
 
-        odr += odrStep;
-        odm += odmStep;
+        rshOpticalDepth += rshOpticalDepthStep;
+        // odm += odmStep;
 
-        lowp vec3 attn = exp(-rsc * odr - msc * odm);
+        // lowp vec3 attenuate = exp(-rsc * rshOpticalDepth);
+        // rshScattering += attenuate * rshOpticalDepthStep;
+        // lowp vec3 attn = exp(-rsc * odr - msc * odm);
         // lowp vec3 attn = vec3(1.0);
-        totalR += odrStep * attn;
-        totalM += odmStep * attn;
+        // totalR += odrStep * attn;
+        // totalM += odmStep * attn;
         samplePoint += ray * sampleSize;
     }
 
-    // lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e4;
-    lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e3;
-    // color = 1.0 - exp(-color);
+    // lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e35;
+    // lowp vec3 color = si * exp(-rshOpticalDepth * rshPhase * rsc) * 1e4;
+    lowp vec3 color = si * exp(-rshPhase * rshOpticalDepth * rsc);
+    // lowp vec3 color = rsc * si * odr * 1e30;
 
     gl_FragColor = vec4(color, 1.0);
 }

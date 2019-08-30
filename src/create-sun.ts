@@ -8,11 +8,6 @@ import {Program, BufferObject} from './types';
 
 const {cos, sin, tan, PI} = Math;
 
-// shader constants
-const wavelengthPowMinus4 = [680, 550, 440].map(l => Math.pow(l * 1e-9, -4));
-const earthRadius = 6371e3;
-const atmospereRadius = 6471e3;
-
 interface Context {
     gl: WebGLRenderingContext,
     program: Program,
@@ -98,21 +93,6 @@ function createRender(context: Context) {
             model
         );
 
-        gl.uniform3fv(
-            program.uniforms.wavelengthPowMinus4,
-            wavelengthPowMinus4
-        );
-        gl.uniform1f(
-            program.uniforms.earthRadius,
-            earthRadius
-        );
-        gl.uniform1f(
-            program.uniforms.atmospereRadius,
-            atmospereRadius
-        );
-
-
-        gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
         gl.disable(gl.BLEND);
@@ -178,7 +158,7 @@ export function sunTimeToString(t: number) {
 
 export function getSunPosition(n: number) {
     const t = n % (24 * 3600 * 1000);
-    const altitude = getAltitude(t) / 2;
+    const altitude = getAltitude(t);
     const azimuth = getAzimuth(t);
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
