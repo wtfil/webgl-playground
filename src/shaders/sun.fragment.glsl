@@ -28,12 +28,27 @@ lowp float phase(
     return 3.0 * (1.0 - g2)  * (1.0 + a * a) / 2.0 / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * a, 1.5);
 }
 
+lowp vec3 translate(lowp vec3 dir) {
+    lowp float r1 = earthRadius;
+    lowp float r2 = atmosphereRadius;
+    lowp float r3 = sqrt(r2 * r2 - r1 * r1);
+    lowp float a = r3 / r2;
+    return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));
+}
+
 void main() {
+    lowp float debugMultiplier1 = 1.0e1;
+    lowp float debugMultiplier2 = 1.0e1;
     lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
-    lowp vec3 position = normalize(worldPosition.xyz) * atmosphereRadius;
+    lowp vec3 sun = translate(sunPosition);
+    // lowp vec3 camera = -cameraPosition;
+    // lowp vec3 position = normalize(worldPosition.xyz) * atmosphereRadius;
+    // lowp vec3 position = worldPosition.xzy;
+    lowp vec3 position = translate(normalize(worldPosition.xyz)) * atmosphereRadius;
     lowp vec3 ray = normalize(position - camera);
     lowp float far = length(position - camera);
-    lowp float lightAngle = dot(normalize(position), normalize(sunPosition));
+    // lowp float far = atmosphereRadius * 2.0 * dot(ray, normalize(position));
+    lowp float lightAngle = dot(normalize(ray), normalize(sun));
     lowp float rshPhase = phase(gr, lightAngle);
     lowp float meiPhase = phase(gm, lightAngle);
 
@@ -61,10 +76,7 @@ void main() {
         samplePoint += ray * sampleSize;
     }
 
-    // lowp vec3 color = si * (pr * rsc * totalR + pm * msc * totalM) * 1e35;
-    // lowp vec3 color = si * exp(-rshOpticalDepth * rshPhase * rsc) * 1e4;
-    lowp vec3 color = si * exp(-rshPhase * rshOpticalDepth * rsc);
-    // lowp vec3 color = rsc * si * odr * 1e30;
+    lowp vec3 color = si * exp(-rshPhase * rshOpticalDepth * rsc * debugMultiplier1) * debugMultiplier2;
 
     gl_FragColor = vec4(color, 1.0);
 }
