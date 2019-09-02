@@ -2,6 +2,8 @@ uniform lowp float domeRadius;
 uniform lowp vec3 sunPosition;
 uniform lowp vec3 cameraPosition;
 
+const lowp float PI = 3.1415926535897932384626433832795;
+const lowp float PI_2 = 1.57079632679489661923;
 const lowp float si = 22.0; // sun intencity
 
 const lowp float earthRadius = 6371e3;
@@ -16,8 +18,9 @@ const lowp float gr = 0.0; // Raylish simetry constant
 const lowp float gm = -0.75; // Mei simetry constant
 
 varying lowp vec4 worldPosition;
+varying lowp vec4 sunView;
 
-const int samples = 5;
+const int samples = 15;
 
 // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
 lowp float phase(
@@ -29,54 +32,57 @@ lowp float phase(
 }
 
 lowp vec3 translate(lowp vec3 dir) {
+    lowp float al0 = asin(dir.z);
+    lowp float az0 = atan(dir.y / dir.x);
+    if (dir.x < 0.0) {
+        az0 += PI;
+    }
     lowp float r1 = earthRadius;
     lowp float r2 = atmosphereRadius;
-    lowp float r3 = sqrt(r2 * r2 - r1 * r1);
-    lowp float a = r3 / r2;
-    return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));
+    lowp float al1 = asin(r1 / r2);
+    lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
+    return vec3(
+        cos(al2) * cos(az0),
+        cos(al2) * sin(az0),
+        sin(al2)
+    );
 }
 
 void main() {
-    lowp float debugMultiplier1 = 1.0e1;
-    lowp float debugMultiplier2 = 1.0e1;
+    lowp float debugMultiplier1 = 1.0e0;
+    lowp float debugMultiplier2 = 1.0e0;
     lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
-    lowp vec3 sun = translate(sunPosition);
-    // lowp vec3 camera = -cameraPosition;
-    // lowp vec3 position = normalize(worldPosition.xyz) * atmosphereRadius;
-    // lowp vec3 position = worldPosition.xzy;
+    lowp vec3 sun = sunPosition;
     lowp vec3 position = translate(normalize(worldPosition.xyz)) * atmosphereRadius;
     lowp vec3 ray = normalize(position - camera);
     lowp float far = length(position - camera);
-    // lowp float far = atmosphereRadius * 2.0 * dot(ray, normalize(position));
     lowp float lightAngle = dot(normalize(ray), normalize(sun));
     lowp float rshPhase = phase(gr, lightAngle);
     lowp float meiPhase = phase(gm, lightAngle);
 
-    lowp vec3 rshScattering = vec3(0.0); // total Raylish scattering
-    lowp vec3 meiScattering = vec3(0.0); // total Mei scattering
     lowp float rshOpticalDepth = 0.0; // optical depth for Raylish phase
     lowp float meiOpticalDepth = 0.0; // optical depth for Mei phase
     lowp float sampleSize = far / float(samples);
-    lowp vec3 samplePoint = camera + sampleSize * ray * 0.5;
+    lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
 
     for (int i = 0; i < samples; i ++) {
         lowp float height = length(samplePoint) - earthRadius;
         lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
-        // lowp float odmStep = exp(-height / msh) * sampleSize;
+        lowp float meiOpticalDepthStep = exp(-height / msh) * sampleSize;
 
         rshOpticalDepth += rshOpticalDepthStep;
-        // odm += odmStep;
+        meiOpticalDepth += meiOpticalDepthStep;
 
         // lowp vec3 attenuate = exp(-rsc * rshOpticalDepth);
-        // rshScattering += attenuate * rshOpticalDepthStep;
         // lowp vec3 attn = exp(-rsc * odr - msc * odm);
-        // lowp vec3 attn = vec3(1.0);
-        // totalR += odrStep * attn;
-        // totalM += odmStep * attn;
         samplePoint += ray * sampleSize;
     }
 
-    lowp vec3 color = si * exp(-rshPhase * rshOpticalDepth * rsc * debugMultiplier1) * debugMultiplier2;
+    lowp vec3 totalScattering = vec3(
+        rshPhase * rshOpticalDepth * rsc +
+        meiPhase * meiOpticalDepth * msc
+    );
+    lowp vec3 color = si * exp(-totalScattering * debugMultiplier1) * debugMultiplier2;
 
     gl_FragColor = vec4(color, 1.0);
 }

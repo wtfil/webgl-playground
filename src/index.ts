@@ -3,7 +3,7 @@ import Vec3 = require('gl-matrix/vec3');
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun, getSunPosition} from './create-sun';
+import {createSun, getSunPosition, sunTimeToString} from './create-sun';
 import {renderProperties, initProperties} from './program-properties';
 import {inRange} from './utils';
 import {ProgramProperties, Unpacked} from './types';
@@ -107,6 +107,7 @@ async function setup() {
             const a = r3 / r2;
 
             const {sunPosition: s} = getSunPosition(properties.sunTime);
+            console.log(sunTimeToString(properties.sunTime));
             const s1 = [
                 s[0] * a,
                 s[1] * a,
