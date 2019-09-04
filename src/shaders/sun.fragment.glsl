@@ -11,8 +11,10 @@ const lowp float atmosphereRadius = 6471e3;
 const lowp float rsh = 8e3; // Raylish scale height
 const lowp float msh = 1.2e3; // Mei scale height
 
-const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
-const lowp float msc = 21e-6; // Mei scattering coefficient
+// const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
+const lowp vec3 rsc = vec3(3.1e-7, 7.2e-7, 17.69e-7); // Raylish scattering coefficient
+// const lowp float msc = 22e-6; // Mei scattering coefficient
+const lowp float msc = 0.0; // Mei scattering coefficient
 
 const lowp float gr = 0.0; // Raylish simetry constant
 const lowp float gm = -0.75; // Mei simetry constant
@@ -32,38 +34,97 @@ lowp float phase(
 }
 
 lowp vec3 translate(lowp vec3 dir) {
-    lowp float al0 = asin(dir.z);
-    lowp float az0 = atan(dir.y / dir.x);
-    if (dir.x < 0.0) {
-        az0 += PI;
-    }
     lowp float r1 = earthRadius;
     lowp float r2 = atmosphereRadius;
-    lowp float al1 = asin(r1 / r2);
-    lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
-    return vec3(
-        cos(al2) * cos(az0),
-        cos(al2) * sin(az0),
-        sin(al2)
-    );
+
+    // lowp float al0 = asin(dir.z);
+    // lowp float az0 = atan(dir.y / dir.x);
+    // if (dir.x < 0.0) {
+    //     az0 += PI;
+    // }
+    // lowp float al1 = asin(r1 / r2);
+    // lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
+    // return vec3(
+    //     cos(al2) * cos(az0),
+    //     cos(al2) * sin(az0),
+    //     sin(al2)
+    // );
+    lowp float r3 = sqrt(r2 * r2 - r1 * r1);
+    lowp float a = r3 / r2;
+    return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));               
+}
+
+// http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
+lowp float rsi(
+    lowp vec3 origin,
+    lowp vec3 direction,
+    lowp float radius
+) {
+    lowp vec3 center = vec3(0.0); // could be used as parameter
+    lowp vec3 oc = origin - center;
+    lowp float a = dot(direction, direction);
+    lowp float b = 2.0 * dot(direction, oc);
+    lowp float c = dot(oc, oc) - radius * radius;
+    lowp float d = b * b - 4.0 * a * c;
+    if (d < 0.0) {
+        return -1.0;
+    }
+    lowp float qd = sqrt(d);
+    lowp float t = (-qd - b) / 2.0 / a;
+    if (t >= 0.0) {
+        return t;
+    }
+    t = (qd - b) / 2.0 / a;
+    if (t > 0.0) {
+        return t;
+    }
+    return -1.0;
+    // return (-b - sqrt(d)) / 2.0 / a;
 }
 
 void main() {
-    lowp float debugMultiplier1 = 1.0e0;
-    lowp float debugMultiplier2 = 1.0e0;
+    lowp float debugMultiplier1 = 1.0e10;
+    lowp float debugMultiplier2 = 1.0e20;
+    lowp float debugMultiplier3 = 3e6;
     lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
-    lowp vec3 sun = sunPosition;
-    lowp vec3 position = translate(normalize(worldPosition.xyz)) * atmosphereRadius;
+    lowp vec3 sun = sunPosition * atmosphereRadius;
+    // lowp vec3 position = translate(normalize(worldPosition.xyz)) * atmosphereRadius;
+    lowp vec3 position = normalize(worldPosition.xyz) * atmosphereRadius;
     lowp vec3 ray = normalize(position - camera);
-    lowp float far = length(position - camera);
-    lowp float lightAngle = dot(normalize(ray), normalize(sun));
+
+    // lowp float far = length(position - camera) * 2.0;
+
+    // lowp vec3 cameran = normalize(camera);
+    // lowp vec3 positionn = normalize(position);
+    lowp float far = rsi(camera, position, atmosphereRadius);
+    if (far < 0.0) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        return;
+    }
+
+    if (far == -1.0) {
+        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        return;
+    }
+
+    lowp float lightAngle = dot(
+        normalize(ray),
+        normalize(sun - camera)
+    );
     lowp float rshPhase = phase(gr, lightAngle);
     lowp float meiPhase = phase(gm, lightAngle);
 
     lowp float rshOpticalDepth = 0.0; // optical depth for Raylish phase
     lowp float meiOpticalDepth = 0.0; // optical depth for Mei phase
+    lowp vec3 rshOpticalDepthV = vec3(0.0);
+    lowp vec3 meiOpticalDepthV = vec3(0.0);
     lowp float sampleSize = far / float(samples);
     lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
+    lowp float sunToFragmentAngle = acos(dot(
+        normalize(sun),
+        normalize(worldPosition.xyz)
+    ));
+    lowp vec3 sunColor = vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, sunToFragmentAngle * 4.0));
 
     for (int i = 0; i < samples; i ++) {
         lowp float height = length(samplePoint) - earthRadius;
@@ -72,17 +133,26 @@ void main() {
 
         rshOpticalDepth += rshOpticalDepthStep;
         meiOpticalDepth += meiOpticalDepthStep;
-
-        // lowp vec3 attenuate = exp(-rsc * rshOpticalDepth);
+        
+        // lowp vec3 attenuate = exp(
+        //     -rsc * rshOpticalDepth
+        //     -msc * meiOpticalDepth
+        // );
+        // rshOpticalDepthV += rshOpticalDepthStep * attenuate;
+        // meiOpticalDepthV += meiOpticalDepthStep * attenuate;
         // lowp vec3 attn = exp(-rsc * odr - msc * odm);
         samplePoint += ray * sampleSize;
     }
 
     lowp vec3 totalScattering = vec3(
-        rshPhase * rshOpticalDepth * rsc +
-        meiPhase * meiOpticalDepth * msc
+        rshPhase * rsc * rshOpticalDepth +
+        meiPhase * msc * meiOpticalDepth
     );
-    lowp vec3 color = si * exp(-totalScattering * debugMultiplier1) * debugMultiplier2;
+    // lowp vec3 color = totalScattering * debugMultiplier3;
+    lowp vec3 color = vec3(0.0);
+    // color += 1.0 - exp(-si * totalScattering * debugMultiplier1) * debugMultiplier2;
+    color += totalScattering * debugMultiplier3;
+    color += sunColor;
 
     gl_FragColor = vec4(color, 1.0);
 }

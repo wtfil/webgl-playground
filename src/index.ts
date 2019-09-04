@@ -101,21 +101,6 @@ async function setup() {
             } else if (properties.sunTime > DAY) {
                 properties.sunTime -= DAY;
             }
-            const r1 = 6371;
-            const r2 = 6471;
-            const r3 = r1 / r2
-            const a = r3 / r2;
-
-            const {sunPosition: s} = getSunPosition(properties.sunTime);
-            console.log(sunTimeToString(properties.sunTime));
-            const s1 = [
-                s[0] * a,
-                s[1] * a,
-                Math.sqrt(1 - Math.pow(a * (1 - s[2] * s[2]), 2))
-            ];
-            // console.log('============')
-            // console.log(Array.from(s))
-            // console.log(s1)
             updateProperties();
         })
     
