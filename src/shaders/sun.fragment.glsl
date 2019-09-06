@@ -11,11 +11,11 @@ const lowp float atmosphereRadius = 6471e3;
 const lowp float rsh = 8.5e3; // Raylish scale height
 const lowp float msh = 1.2e3; // Mei scale height
 
-const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
-// const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
+// const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
+const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
 // const lowp vec3 rsc = vec3(3.1e-7, 7.2e-7, 17.69e-7); // Raylish scattering coefficient
-const lowp float msc = 22e-6; // Mei scattering coefficient
-// const lowp float msc = 0.0; // Mei scattering coefficient
+// const lowp float msc = 22e-6; // Mei scattering coefficient
+const lowp float msc = 0.0; // Mei scattering coefficient
 
 const lowp float gr = 0.0; // Raylish simetry constant
 const lowp float gm = -0.75; // Mei simetry constant
@@ -91,18 +91,28 @@ lowp vec3 getSunColor(
         sun,
         position
     ));
-    return vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, angle * 4.0));
+    return vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, angle * 8.0));
 }
 
 void main() {
     lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
     lowp vec3 world = normalize(worldPosition.xyz);
     lowp vec3 position = translate(world) * atmosphereRadius;
-    // lowp vec3 position = world * atmosphereRadius;
+    // if (world.z < -0.03) {
+    //     gl_FragColor = vec4(0.0);
+    //     return;
+    // }
     lowp vec3 ray = normalize(position - camera);
     lowp vec3 sun = normalize(sunPosition);
 
     lowp float far = length(position - camera);
+    if (position.z < camera.z) {
+        lowp float fragmentAngle = dot(
+            normalize(-camera),
+            normalize(position - camera)
+        );
+        // far -= 2.0 * earthRadius * fragmentAngle * 5.0;
+    }
 
     lowp float lightAngle = dot(ray, -sun);
     lowp float rshFactor = phase(gr, lightAngle);
@@ -126,7 +136,8 @@ void main() {
         rshOpticalDepth += rshOpticalDepthStep * sampleSize;
         meiOpticalDepth += meiOpticalDepthStep * sampleSize;
 
-        lowp float ca = dot(vec3(0.0, 0.0, 1.0), normalize(samplePoint));
+
+        // lowp float ca = dot(vec3(0.0, 0.0, 1.0), normalize(samplePoint));
         // lowp float attenuateSize = atmosphereRadius * sin(
         //     acos(lightAngle) + acos(ca)
         // );
@@ -139,10 +150,25 @@ void main() {
         // ));
 
         // attenuate *= 1e-4;
-        lowp float attenuate = 1e-4;
+        // lowp float attenuate = 1e-4;
+        lowp vec3 attenuate1 = exp(-(
+            rsc * rshOpticalDepth +
+            msc * meiOpticalDepth
+        ));
 
-        rshAccumulated += rshOpticalDepth * attenuate;
-        meiAccumulated += meiOpticalDepth * attenuate;
+        // attenuate1 *= 1e-7;
+        attenuate1 *= 4e-2;
+
+        // lowp float ar = atmosphereRadius;
+        // lowp float attenuate2Size = sqrt(sh * sh + ar * ar - 2.0 * sh * ar * lightAngle);
+        // lowp vec3 attenuate2 = exp(-(
+        //     rsc * rshOpticalDepthStep * attenuate2Size +
+        //     msc * meiOpticalDepthStep * attenuate2Size
+        // ));
+        lowp vec3 attenuate2 = vec3(1.0);
+
+        rshAccumulated += rshOpticalDepthStep * sampleSize * attenuate1 * attenuate2;
+        meiAccumulated += meiOpticalDepthStep * sampleSize * attenuate1 * attenuate2;
         
         samplePoint += ray * sampleSize;
     }
@@ -153,6 +179,7 @@ void main() {
         rshFactor * rsc * rshAccumulated +
         meiFactor * msc * meiAccumulated
     );
+
     color += sunColor;
 
     gl_FragColor = vec4(color, 1.0);
