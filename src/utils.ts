@@ -102,15 +102,6 @@ export function createMatrices(opts: {
     const projection = Mat4.create();
     const view = Mat4.create();
     const model = Mat4.create();
-    let eye: Vec3;
-    if (opts.flip) {
-        eye = Vec3.clone(opts.cameraPosition);
-        Vec3.sub(eye, eye, opts.center);
-        eye[2] = -eye[2];
-        Vec3.add(eye, eye, opts.center);
-    } else {
-        eye = opts.cameraPosition;
-    }
     Mat4.perspective(
         projection,
         Math.PI / 4,
@@ -118,7 +109,31 @@ export function createMatrices(opts: {
         0.1,
         opts.far || 2000
     );
-    Mat4.lookAt(view, eye, opts.center, [0, 0, 1]);
+    if (opts.flip) {
+        // const x2 = opts.cameraPosition;
+        // const x1 = opts.center;
+        // const x0 = [0, 0, 0];
+        // const x01 = Vec3.create();
+        // const x02 = Vec3.create();
+        // const x21 = Vec3.create();
+        // const x0102 = Vec3.create();
+        // Vec3.sub(x01, x0, x1);
+        // Vec3.sub(x02, x0, x2);
+        // Vec3.sub(x21, x2, x1);
+        // Vec3.cross(x0102, x01, x02);
+
+        // const d = Vec3.length(x0102) / Vec3.length(x21);
+
+        const eye = Vec3.create();
+        // console.log(d)
+        Vec3.sub(eye, opts.cameraPosition, opts.center);
+        eye[2] -= eye[2];
+        Vec3.add(eye, eye, opts.center);
+
+        Mat4.lookAt(view, eye, opts.center, [0, 0, 1]);
+    } else {
+        Mat4.lookAt(view, opts.cameraPosition, opts.center, [0, 0, 1]);
+    }
     return {model, projection, view};
 }
 

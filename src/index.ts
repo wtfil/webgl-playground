@@ -27,6 +27,7 @@ async function setup() {
     }
 
     const propertiesNode = document.querySelector('[data-properties]') as HTMLTableElement;
+    let pageIsVisible = true;
 
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/mountain2.png',
@@ -45,6 +46,9 @@ async function setup() {
     const emitter = initControls(canvas);
 
     emitter
+        .on('visability', e => {
+            pageIsVisible = e.visible;
+        })
         .on('toggleRenderWater', () => {
             properties.renderWater = !properties.renderWater;
             updateProperties();
@@ -77,6 +81,18 @@ async function setup() {
         })
         .on('moveCamera', e => {
             const {cameraPosition, center} = properties;
+            const {forward, left} = e;
+            const move = Vec3.create();
+            Vec3.sub(move, cameraPosition, center);
+            Vec3.normalize(move, move);
+            if (left) {
+                Vec3.rotateZ(move, move, [0, 0, 0], Math.PI / 2);
+            }
+            Vec3.scale(move, move, -3 * (forward + left));
+            Vec3.add(cameraPosition, cameraPosition, move)
+            Vec3.add(center, center, move);
+            /*
+            const {cameraPosition, center} = properties;
             const distance = Vec3.distance(center, cameraPosition);
             const eye = Vec3.create();
             Vec3.sub(eye, cameraPosition, center);
@@ -91,7 +107,18 @@ async function setup() {
             Vec3.copy(eye, proj);
             Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
             Vec3.add(cameraPosition, center, eye);
+            */
             updateProperties();
+        })
+        .on('rotateCamera', e => {
+            const {dx, dy} = e;
+            const {cameraPosition, center} = properties;
+            const dmy = cameraPosition[0] > 0 ? 1 : -1;
+            Vec3.rotateZ(cameraPosition, cameraPosition, center, dx / 100);
+            Vec3.rotateY(cameraPosition, cameraPosition, center, dy * dmy / 100);
+            console.log('rotate camera')
+            updateProperties();
+            // Vec3.rotateZ(cameraPosition, cameraPosition, center, dx);
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
@@ -99,8 +126,7 @@ async function setup() {
         })
     
     const updateProperties = () => {
-        // saveProperties(properties);
-        renderProperties(propertiesNode, properties);
+        // renderProperties(propertiesNode, properties);
     }
 
     function render() {
@@ -115,14 +141,16 @@ async function setup() {
             azimuth,
             altitude
         });
-        updateProperties();
-        drawScene({
-            gl: gl!,
-            properties,
-            terrain,
-            water,
-            sun
-        });
+        if (pageIsVisible) {
+            updateProperties();
+            drawScene({
+                gl: gl!,
+                properties,
+                terrain,
+                water,
+                sun
+            });
+        }
         requestAnimationFrame(render);
     }
     

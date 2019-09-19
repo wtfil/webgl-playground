@@ -9,7 +9,9 @@ uniform sampler2D reflectionTexture;
 uniform lowp float dudvOffset;
 uniform int useRefraction;
 uniform int useReflection;
+// uniform lowp float size;
 uniform lowp vec3 directionalLightVector;
+uniform lowp float reflectionYOffset;
 
 const lowp float waterDistortionStrenth = 0.03;
 const lowp float fresnelStrength = 1.5;
@@ -29,16 +31,14 @@ void main() {
     // base refract/reflect texture coordinates
     lowp vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
     lowp vec2 refractTexCoords = vec2(ndc.x, +ndc.y);
+    // lowp vec2 reflectTexCoords = vec2(ndc.x, 1.0-ndc.y - reflectionYOffset);
     lowp vec2 reflectTexCoords = vec2(ndc.x, 1.0-ndc.y);
+
 
     // refractive factor
     lowp vec3 toCamera = normalize(fromFragmentToCamera);
     lowp vec4 normalMapColor = texture2D(normalMapTexture, distortedTexCoords);
-    lowp vec3 normal = vec3(
-      normalMapColor.r * 2.0 - 1.0,
-      normalMapColor.g * 2.0 - 1.0,
-      normalMapColor.b * 2.0 - 1.0
-    );
+    lowp vec3 normal = normalMapColor.xyz * 2.0 - 1.0;
     normal = normalize(normal);
     lowp float refractiveFactor = dot(toCamera, normal);
     refractiveFactor = pow(refractiveFactor, fresnelStrength);
@@ -48,7 +48,7 @@ void main() {
     reflectTexCoords += totalDistortion;
     // refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);
     // reflectTexCoords.x = clamp(reflectTexCoords.x, 0.001, 0.999);
-    // reflectTexCoords.y = clamp(reflectTexCoords.y, -0.999, -0.001);
+    reflectTexCoords.y = clamp(reflectTexCoords.y, 0.001, 0.999);
 
     // lighs
     lowp vec3 reflectedLight = reflect(normalize(directionalLightVector), normal);

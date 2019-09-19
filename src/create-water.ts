@@ -112,6 +112,28 @@ function createRender(context: Context) {
             center,
             aspect
         });
+
+        const x2 = Vec3.clone(opts.cameraPosition);
+        const x1 = Vec3.clone(opts.center);
+        // const x0 = [0, 0, 0];
+        // const x01 = Vec3.create();
+        // const x02 = Vec3.create();
+        const x21 = Vec3.create();
+        // const x0102 = Vec3.create();
+        // Vec3.sub(x01, x0, x1);
+        // Vec3.sub(x02, x0, x2);
+        Vec3.sub(x21, x2, x1);
+        // Vec3.cross(x0102, x01, x02);
+        // const d = Vec3.length(x0102) / Vec3.length(x21);
+        // console.log(opts.center, size)
+        // const d = Vec3.angle(x21, x1) / size * 1.5e2;
+        const l = Vec3.length(x1);
+        Vec3.normalize(x21, x21);
+        Vec3.normalize(x1, x1);
+        const ca = Vec3.dot(x21, x1);
+        const sa = Math.sqrt(1 - Math.min(1, ca * ca));
+        const d = l * sa / size * (-5e-1);
+        console.log(d)
         
         Mat4.scale(model, model, [size, size, 1]);
 
@@ -123,8 +145,10 @@ function createRender(context: Context) {
         gl.uniform1f(program.uniforms.dudvOffset, (time / 1000 * 0.06) % 1);
         gl.uniform1i(program.uniforms.useRefraction, Number(useRefraction));
         gl.uniform1i(program.uniforms.useReflection, Number(useReflection));
-        gl.uniform3fv(program.uniforms.center, center);
         gl.uniform3fv(program.uniforms.cameraPosition, cameraPosition);
+        // gl.uniform3fv(program.uniforms.center, center);
+        // gl.uniform1f(program.uniforms.center, size);
+        gl.uniform1f(program.uniforms.reflectionYOffset, d);
         gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
         gl.uniformMatrix4fv(
             program.uniforms.projection,
@@ -178,11 +202,12 @@ function createArrays() {
         0, 2, 1,
         1, 2, 3
     ];
+
     const texture = [
+        1, 1,
         0, 0,
         1, 0,
         0, 1,
-        1, 1
     ];
 
     return {position, indices, texture};
