@@ -93,6 +93,5 @@ export function initControls(elem: HTMLElement) {
         ee.emit('visability', {visible: true});
     })
 
-
     return ee;
 }
