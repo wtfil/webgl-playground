@@ -65,10 +65,6 @@ function createRender(context: Context) {
             aspect,
             flip
         });
-        // reflection
-        if (opts.flip) {
-            Mat4.translate(model, model, [0, 0,  clipDirection * clipLevel * 2]);
-        }
 
         gl.useProgram(program.program);
         bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);

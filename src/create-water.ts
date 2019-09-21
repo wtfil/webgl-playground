@@ -112,7 +112,7 @@ function createRender(context: Context) {
             center,
             aspect
         });
-        
+
         Mat4.scale(model, model, [size, size, 1]);
 
         gl.useProgram(program.program);
@@ -123,7 +123,6 @@ function createRender(context: Context) {
         gl.uniform1f(program.uniforms.dudvOffset, (time / 1000 * 0.06) % 1);
         gl.uniform1i(program.uniforms.useRefraction, Number(useRefraction));
         gl.uniform1i(program.uniforms.useReflection, Number(useReflection));
-        gl.uniform3fv(program.uniforms.center, center);
         gl.uniform3fv(program.uniforms.cameraPosition, cameraPosition);
         gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
         gl.uniformMatrix4fv(
@@ -178,11 +177,12 @@ function createArrays() {
         0, 2, 1,
         1, 2, 3
     ];
+
     const texture = [
         0, 0,
         1, 0,
         0, 1,
-        1, 1
+        1, 1,
     ];
 
     return {position, indices, texture};

@@ -73,6 +73,11 @@ export function renderProperties(node: HTMLTableElement, properties: ProgramProp
             value: arrToString(properties.cameraPosition)
         },
         {
+            title: 'center',
+            control: 'a d w s wheel mouse',
+            value: arrToString(properties.center)
+        },
+        {
             title: 'terrain',
             control: '1',
             value: properties.renderTerrain
