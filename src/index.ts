@@ -103,9 +103,14 @@ async function setup() {
         .on('rotateCamera', e => {
             const {dx, dy} = e;
             const {cameraPosition, center} = properties;
-            const dmy = cameraPosition[0] > 0 ? 1 : -1;
-            Vec3.rotateZ(cameraPosition, cameraPosition, center, dx / 100);
-            Vec3.rotateY(cameraPosition, cameraPosition, center, dy * dmy / 100);
+            const eye = Vec3.create();
+            Vec3.sub(eye, center, cameraPosition);
+            const length = Vec3.length(eye);
+            Vec3.rotateZ(eye, eye, [0, 0, 0], dx * 2e-3);
+            eye[2] -= dy;
+            Vec3.normalize(eye, eye);
+            Vec3.scale(eye, eye, length);
+            Vec3.add(center, cameraPosition, eye);
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
