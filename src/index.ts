@@ -85,29 +85,27 @@ async function setup() {
             const move = Vec3.create();
             Vec3.sub(move, cameraPosition, center);
             Vec3.normalize(move, move);
-            if (left) {
-                Vec3.rotateZ(move, move, [0, 0, 0], Math.PI / 2);
+            let am = 0;
+            if (forward === 1 && !left) {
+                am = 2;
+            } else if (forward === 1 && left === 1) {
+                am = 2.5;
+            } else if (!forward && left === 1) {
+                am = 3;
+            } else if (forward === -1 && left === 1) {
+                am = 3.5;
+            } else if (forward === -1 && left === -1) {
+                am = 0.5;
+            } else if (!forward && left === -1) {
+                am = 1;
+            } else if (forward === 1 && left === -1) {
+                am = 1.5;
             }
-            Vec3.scale(move, move, -3 * (forward + left));
+
+            Vec3.rotateZ(move, move, [0, 0, 0], am * Math.PI / 2);
+            Vec3.scale(move, move, 3);
             Vec3.add(cameraPosition, cameraPosition, move)
             Vec3.add(center, center, move);
-            /*
-            const {cameraPosition, center} = properties;
-            const distance = Vec3.distance(center, cameraPosition);
-            const eye = Vec3.create();
-            Vec3.sub(eye, cameraPosition, center);
-            const proj = Vec3.clone(eye);
-            proj[2] = 0;
-            const angle = inRange(
-                Vec3.angle(eye, proj) + e.dy * 1e-2,
-                0.1,
-                Math.PI / 3
-            );
-            proj[2] = distance * Math.sin(angle);
-            Vec3.copy(eye, proj);
-            Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
-            Vec3.add(cameraPosition, center, eye);
-            */
             updateProperties();
         })
         .on('rotateCamera', e => {
@@ -116,9 +114,7 @@ async function setup() {
             const dmy = cameraPosition[0] > 0 ? 1 : -1;
             Vec3.rotateZ(cameraPosition, cameraPosition, center, dx / 100);
             Vec3.rotateY(cameraPosition, cameraPosition, center, dy * dmy / 100);
-            console.log('rotate camera')
             updateProperties();
-            // Vec3.rotateZ(cameraPosition, cameraPosition, center, dx);
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
