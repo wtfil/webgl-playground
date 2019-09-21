@@ -5,20 +5,20 @@ export function initControls(elem: HTMLElement) {
     const ee = new EventEmitter();
     const pressed: {[key: string]: boolean} = {};
     const pullKeys = () => {
-        let dx = 0;
-        let dy = 0;
+        let left = 0;
+        let forward = 0;
         let ds = 0; 
 
         if (pressed.w && !pressed.s) {
-            dy = 1;
+            forward = 1;
         } else if (pressed.s && !pressed.w) {
-            dy = -1
+            forward = -1
         }
 
         if (pressed.a && !pressed.d) {
-            dx = -1;
+            left = 1;
         } else if (pressed.d && !pressed.a) {
-            dx = 1;
+            left = -1;
         }
 
         if (pressed.j && !pressed.k) {
@@ -27,8 +27,8 @@ export function initControls(elem: HTMLElement) {
             ds += 1000 * 360;
         }
 
-        if (dx || dy) {
-            ee.emit('moveCamera', {dx, dy});
+        if (forward || left) {
+            ee.emit('moveCamera', {forward, left});
         }
         if (ds) {
             ee.emit('moveSun', {ds});
@@ -81,8 +81,17 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mousemove', e => {
         const {movementX, movementY} = e;
         if (mousedown) {
-            ee.emit('moveCamera', {dx: -movementX, dy: movementY})
+            ee.emit('rotateCamera', {dx: -movementX, dy: movementY})
         }
     })
+
+    window.addEventListener('blur', () => {
+        ee.emit('visability', {visible: false});
+    })
+
+    window.addEventListener('focus', () => {
+        ee.emit('visability', {visible: true});
+    })
+
     return ee;
 }

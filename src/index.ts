@@ -3,8 +3,8 @@ import Vec3 = require('gl-matrix/vec3');
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun, getSunPosition, sunTimeToString} from './create-sun';
-import {renderProperties, initProperties} from './program-properties';
+import {createSun, getSunPosition} from './create-sun';
+import {initProperties} from './program-properties';
 import {inRange} from './utils';
 import {ProgramProperties, Unpacked} from './types';
 
@@ -20,13 +20,13 @@ async function setup() {
     const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-    const gl = canvas.getContext('experimental-webgl');
+    const gl = canvas.getContext('experimental-webgl') as WebGLRenderingContext;
     if (!gl) {
         console.warn('Can not create webgl context');
         return;
     }
 
-    const propertiesNode = document.querySelector('[data-properties]') as HTMLTableElement;
+    let pageIsVisible = true;
 
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/mountain2.png',
@@ -45,25 +45,23 @@ async function setup() {
     const emitter = initControls(canvas);
 
     emitter
+        .on('visability', e => {
+            pageIsVisible = e.visible;
+        })
         .on('toggleRenderWater', () => {
             properties.renderWater = !properties.renderWater;
-            updateProperties();
         })
         .on('toggleRenderTerrain', () => {
             properties.renderTerrain = !properties.renderTerrain;
-            updateProperties();
         })
         .on('toggleRefraction', () => {
             properties.useRefraction = !properties.useRefraction;
-            updateProperties();
         })
         .on('toggleReflection', () => {
             properties.useReflection = !properties.useReflection;
-            updateProperties();
         })
         .on('toggleRenderSun', () => {
             properties.renderSun = !properties.renderSun;
-            updateProperties();
         })
         .on('zoom', e => {
             const {cameraPosition, center} = properties;
@@ -73,25 +71,46 @@ async function setup() {
             Vec3.sub(eye, cameraPosition, center);
             Vec3.scale(eye, eye, nextDistance / distance);
             Vec3.add(cameraPosition, center, eye);
-            updateProperties();
         })
         .on('moveCamera', e => {
             const {cameraPosition, center} = properties;
-            const distance = Vec3.distance(center, cameraPosition);
+            const {forward, left} = e;
+            const forwardMove = Vec3.create();
+            const leftMove = Vec3.create();
+            const move = Vec3.create();
+            Vec3.sub(forwardMove, center, cameraPosition);
+            Vec3.rotateZ(leftMove, forwardMove, [0, 0, 1], Math.PI / 2);
+            leftMove[2] = 0;
+
+            if (forward === 1) {
+                Vec3.add(move, move, forwardMove);
+            }
+            if (forward === -1) {
+                Vec3.sub(move, move, forwardMove);
+            }
+            if (left === 1) {
+                Vec3.add(move, move, leftMove);
+            }
+            if (left === -1) {
+                Vec3.sub(move, move, leftMove);
+            }
+
+            Vec3.normalize(move, move);
+            Vec3.scale(move, move, 3);
+            Vec3.add(cameraPosition, cameraPosition, move)
+            Vec3.add(center, center, move);
+        })
+        .on('rotateCamera', e => {
+            const {dx, dy} = e;
+            const {cameraPosition, center} = properties;
             const eye = Vec3.create();
-            Vec3.sub(eye, cameraPosition, center);
-            const proj = Vec3.clone(eye);
-            proj[2] = 0;
-            const angle = inRange(
-                Vec3.angle(eye, proj) + e.dy * 1e-2,
-                0.1,
-                Math.PI / 3
-            );
-            proj[2] = distance * Math.sin(angle);
-            Vec3.copy(eye, proj);
-            Vec3.rotateZ(eye, eye, [0, 0, 0], e.dx * 1e-2)
-            Vec3.add(cameraPosition, center, eye);
-            updateProperties();
+            Vec3.sub(eye, center, cameraPosition);
+            const length = Vec3.length(eye);
+            Vec3.rotateZ(eye, eye, [0, 0, 0], dx * 2e-3);
+            eye[2] -= dy;
+            Vec3.normalize(eye, eye);
+            Vec3.scale(eye, eye, length);
+            Vec3.add(center, cameraPosition, eye);
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
@@ -101,15 +120,12 @@ async function setup() {
             } else if (properties.sunTime > DAY) {
                 properties.sunTime -= DAY;
             }
-            updateProperties();
         })
     
-    const updateProperties = () => {
-        // saveProperties(properties);
-        // renderProperties(propertiesNode, properties);
-    }
-
     function render() {
+        if (!pageIsVisible) {
+            return requestAnimationFrame(render);
+        }
         const time = Date.now() - properties.start;
         const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
         const directionalLightVector = Vec3.create();
@@ -121,7 +137,6 @@ async function setup() {
             azimuth,
             altitude
         });
-        updateProperties();
         drawScene({
             gl: gl!,
             properties,
@@ -133,7 +148,6 @@ async function setup() {
     }
     
     render();
-    updateProperties();
 }
 
 
