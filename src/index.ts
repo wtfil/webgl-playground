@@ -20,6 +20,7 @@ async function setup() {
     const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
+    // canvas.style.cursor = 'none';
     const gl = canvas.getContext('experimental-webgl') as WebGLRenderingContext;
     if (!gl) {
         console.warn('Can not create webgl context');

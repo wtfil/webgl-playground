@@ -14,8 +14,8 @@ const lowp float msh = 1.2e3; // Mei scale height
 // const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
 const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
 // const lowp vec3 rsc = vec3(3.1e-7, 7.2e-7, 17.69e-7); // Raylish scattering coefficient
-// const lowp float msc = 22e-6; // Mei scattering coefficient
-const lowp float msc = 0.0; // Mei scattering coefficient
+const lowp float msc = 22e-6; // Mei scattering coefficient
+// const lowp float msc = 0.0; // Mei scattering coefficient
 
 const lowp float gr = 0.0; // Raylish simetry constant
 const lowp float gm = -0.75; // Mei simetry constant
@@ -23,7 +23,7 @@ const lowp float gm = -0.75; // Mei simetry constant
 varying lowp vec4 worldPosition;
 varying lowp vec4 sunView;
 
-const int samples = 15;
+const int samples = 5;
 
 // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
 lowp float phase(
@@ -98,35 +98,74 @@ void main() {
     lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
     lowp vec3 world = normalize(worldPosition.xyz);
     lowp vec3 position = translate(world) * atmosphereRadius;
-    // if (world.z < -0.03) {
-    //     gl_FragColor = vec4(0.0);
-    //     return;
-    // }
     lowp vec3 ray = normalize(position - camera);
     lowp vec3 sun = normalize(sunPosition);
 
     lowp float far = length(position - camera);
-    if (position.z < camera.z) {
-        lowp float fragmentAngle = dot(
-            normalize(-camera),
-            normalize(position - camera)
-        );
-        // far -= 2.0 * earthRadius * fragmentAngle * 5.0;
-    }
 
     lowp float lightAngle = dot(ray, -sun);
     lowp float rshFactor = phase(gr, lightAngle);
     lowp float meiFactor = phase(gm, lightAngle);
 
-    lowp float rshOpticalDepth = 0.0; // optical depth for Raylish phase
-    lowp float meiOpticalDepth = 0.0; // optical depth for Mei phase
+    // lowp float rshOpticalDepth = 0.0; // optical depth for Raylish phase
+    // lowp float meiOpticalDepth = 0.0; // optical depth for Mei phase
 
-    lowp vec3 rshAccumulated = vec3(0.0);
-    lowp vec3 meiAccumulated = vec3(0.0);
+    // lowp vec3 rshAccumulated = vec3(0.0);
+    // lowp vec3 meiAccumulated = vec3(0.0);
+    lowp vec3 totalLightAccumulated = vec3(0.0);
     lowp float sampleSize = far / float(samples);
     lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
     lowp vec3 sunColor = getSunColor(sun, world);
+    lowp vec3 farSunPosition = sun * 1e6;
+    lowp float depth = 0.0;
 
+    for (int i = 0; i < samples; i ++) {
+
+        // or - original ray
+        lowp float orFar = rsi(
+            samplePoint,
+            farSunPosition,
+            atmosphereRadius
+        );
+        lowp float orSampleSize = orFar / float(samples);
+        lowp vec3 orSamplePoint = samplePoint + orSampleSize / 2.0 * sun;
+        lowp float orDepth = 0.0;
+        for (int j = 0; j < samples; j ++) {
+            lowp float height = length(orSamplePoint) - earthRadius;
+            lowp float rshOpticalDepthStep = exp(-height / rsh) * orSampleSize;
+            // lowp float meiOpticalDepthStep = exp(-height / msh) * orSampleSize;
+
+            // rshAccumulated += rshOpticalDepthStep;
+            // meiAccumulated += meiOpticalDepthStep;
+
+            orDepth += rshOpticalDepthStep;
+            // orDepth += meiOpticalDepthStep;
+
+            orSamplePoint += sun * orSampleSize;
+        }
+
+        lowp float height = length(samplePoint) - earthRadius;
+        lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
+        // lowp float meiOpticalDepthStep = exp(-height / msh) * orSampleSize;
+        depth += rshOpticalDepthStep;
+        // depth += meiOpticalDepthStep;
+
+        lowp vec3 outScattering = exp(
+            -rsc * (depth + orDepth)
+            // to Mei scattering
+        );
+
+        lowp vec3 inScattering = (
+            rshFactor * rsc * rshOpticalDepthStep
+            // to Mei scattering
+        );
+
+        totalLightAccumulated += outScattering * inScattering;
+
+        samplePoint += ray * sampleSize;
+    }
+
+    /*
     for (int i = 0; i < samples; i ++) {
         lowp float sh = length(samplePoint);
         lowp float height = sh - earthRadius;
@@ -137,34 +176,12 @@ void main() {
         meiOpticalDepth += meiOpticalDepthStep * sampleSize;
 
 
-        // lowp float ca = dot(vec3(0.0, 0.0, 1.0), normalize(samplePoint));
-        // lowp float attenuateSize = atmosphereRadius * sin(
-        //     acos(lightAngle) + acos(ca)
-        // );
-        // lowp float attenuateSize = rsi(samplePoint, sun * atmosphereRadius * 10.0, atmosphereRadius);
-        // lowp float attenuateSize = atmosphereRadius - sh;
-
-        // lowp vec3 attenuate = exp(-(
-        //     rsc * rshOpticalDepthStep * attenuateSize +
-        //     msc * meiOpticalDepthStep * attenuateSize
-        // ));
-
-        // attenuate *= 1e-4;
-        // lowp float attenuate = 1e-4;
         lowp vec3 attenuate1 = exp(-(
             rsc * rshOpticalDepth +
             msc * meiOpticalDepth
         ));
-
-        // attenuate1 *= 1e-7;
         attenuate1 *= 4e-2;
 
-        // lowp float ar = atmosphereRadius;
-        // lowp float attenuate2Size = sqrt(sh * sh + ar * ar - 2.0 * sh * ar * lightAngle);
-        // lowp vec3 attenuate2 = exp(-(
-        //     rsc * rshOpticalDepthStep * attenuate2Size +
-        //     msc * meiOpticalDepthStep * attenuate2Size
-        // ));
         lowp vec3 attenuate2 = vec3(1.0);
 
         rshAccumulated += rshOpticalDepthStep * sampleSize * attenuate1 * attenuate2;
@@ -172,13 +189,21 @@ void main() {
         
         samplePoint += ray * sampleSize;
     }
+    */
 
     lowp vec3 color = vec3(0.0);
 
-    color += si * (
-        rshFactor * rsc * rshAccumulated +
-        meiFactor * msc * meiAccumulated
-    );
+    color += si * totalLightAccumulated * 1e-1;
+
+    // color += si * (
+    //     rshFactor * rsc * rshAccumulated +
+    //     meiFactor * msc * meiAccumulated
+    // );
+
+    // color += si * (
+    //     rshFactor * rsc * rshAccumulated +
+    //     meiFactor * msc * meiAccumulated
+    // );
 
     color += sunColor;
 

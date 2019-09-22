@@ -2,8 +2,8 @@ import {EventEmitter} from 'events';
 
 export function initControls(elem: HTMLElement) {
     let mousedown = false;
+    let pressed: {[key: string]: boolean} = {};
     const ee = new EventEmitter();
-    const pressed: {[key: string]: boolean} = {};
     const pullKeys = () => {
         let left = 0;
         let forward = 0;
@@ -78,6 +78,9 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mouseup', () => {
         mousedown = false;
     })
+    elem.addEventListener('contextmenu', e => {
+        e.preventDefault();
+    })
     window.addEventListener('mousemove', e => {
         const {movementX, movementY} = e;
         if (mousedown) {
@@ -86,6 +89,7 @@ export function initControls(elem: HTMLElement) {
     })
 
     window.addEventListener('blur', () => {
+        pressed = {};
         ee.emit('visability', {visible: false});
     })
 

@@ -37,7 +37,7 @@ function createRender(context: Context) {
         sunPosition: Vec3,
         flip?: boolean
     }) {
-        const domeRadius = 3000;
+        const domeRadius = 1000;
         const {gl, program, sun} = context;
         const {
             cameraPosition,
@@ -53,6 +53,7 @@ function createRender(context: Context) {
             flip,
             far: domeRadius * 2
         });
+        Mat4.translate(model, model, cameraPosition);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(program.program);

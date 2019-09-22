@@ -14,7 +14,7 @@ const DEFAULT_PROPERTIES: ProgramProperties = {
     renderWater: true,
     renderTerrain: true,
     useReflection: true,
-    useRefraction: true,
+    useRefraction: false,
     renderSun: true
 };
 const LOCALSTORAGE_KEY = 'wp-program-params';

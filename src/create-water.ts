@@ -83,6 +83,31 @@ function createUpdateRefractionTexture(context: Context) {
 }
 
 function createRender(context: Context) {
+
+    const {
+        size,
+        program,
+        gl,
+        water
+    } = context;
+    
+    gl.useProgram(program.program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, water.textures.dudv);
+    gl.uniform1i(program.uniforms.dudvTexture, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, water.textures.normalMap);
+    gl.uniform1i(program.uniforms.normalMapTexture, 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, water.textures.refraction);
+    gl.uniform1i(program.uniforms.refractionTexture, 2);
+
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, water.textures.reflection);
+    gl.uniform1i(program.uniforms.reflectionTexture, 3);
+
     return function render(opts: {
         cameraPosition: Vec3,
         center: Vec3,
@@ -92,12 +117,6 @@ function createRender(context: Context) {
         useRefraction: boolean,
         useReflection: boolean
     }) {
-        const {
-            size,
-            program,
-            gl,
-            water
-        } = context;
         const {
             cameraPosition,
             center,
@@ -120,7 +139,7 @@ function createRender(context: Context) {
         bindBuffer(gl, water.buffers.texture, program.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(program.uniforms.dudvOffset, (time / 1000 * 0.06) % 1);
+        gl.uniform1f(program.uniforms.dudvOffset, (time / 1000 * 0.03) % 1);
         gl.uniform1i(program.uniforms.useRefraction, Number(useRefraction));
         gl.uniform1i(program.uniforms.useReflection, Number(useReflection));
         gl.uniform3fv(program.uniforms.cameraPosition, cameraPosition);
@@ -142,22 +161,6 @@ function createRender(context: Context) {
             false,
             view
         );
-
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, water.textures.dudv);
-        gl.uniform1i(program.uniforms.dudvTexture, 0);
-
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, water.textures.normalMap);
-        gl.uniform1i(program.uniforms.normalMapTexture, 1);
-
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, water.textures.refraction);
-        gl.uniform1i(program.uniforms.refractionTexture, 2);
-
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, water.textures.reflection);
-        gl.uniform1i(program.uniforms.reflectionTexture, 3);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
