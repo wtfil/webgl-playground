@@ -11,8 +11,8 @@ const lowp float atmosphereRadius = 6471e3;
 const lowp float rsh = 8.5e3; // Raylish scale height
 const lowp float msh = 1.2e3; // Mei scale height
 
-// const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
-const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
+const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
+// const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
 // const lowp vec3 rsc = vec3(3.1e-7, 7.2e-7, 17.69e-7); // Raylish scattering coefficient
 const lowp float msc = 22e-6; // Mei scattering coefficient
 // const lowp float msc = 0.0; // Mei scattering coefficient
@@ -61,7 +61,7 @@ lowp float rsi(
     lowp vec3 direction,
     lowp float radius
 ) {
-    return length(direction - origin) * 1e-1;
+    // return length(direction - origin) * 1e-1;
     lowp vec3 center = vec3(0.0); // could be used as parameter
     lowp vec3 oc = origin - center;
     lowp float a = dot(direction, direction);
@@ -116,7 +116,7 @@ void main() {
     lowp float sampleSize = far / float(samples);
     lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
     lowp vec3 sunColor = getSunColor(sun, world);
-    lowp vec3 farSunPosition = sun * 1e6;
+    lowp vec3 farSunPosition = sun * 1e12;
     lowp float depth = 0.0;
 
     for (int i = 0; i < samples; i ++) {
@@ -193,7 +193,7 @@ void main() {
 
     lowp vec3 color = vec3(0.0);
 
-    color += si * totalLightAccumulated * 1e-1;
+    color += si * totalLightAccumulated * 5e-2;
 
     // color += si * (
     //     rshFactor * rsc * rshAccumulated +
