@@ -164,6 +164,7 @@ export function getSunPosition(n: number) {
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
     const z = sin(altitude);
+    // console.log([x, -y, z]);
     return {
         altitude,
         azimuth,

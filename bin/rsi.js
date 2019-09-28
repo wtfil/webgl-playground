@@ -1,35 +1,6 @@
-
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
-/*
-lowp float rsi(
-    lowp vec3 origin,
-    lowp vec3 direction,
-    lowp float radius
-) {
-    lowp vec3 center = vec3(0.0); // could be used as parameter
-    lowp vec3 oc = origin - center;
-    lowp float a = dot(direction, direction);
-    lowp float b = 2.0 * dot(direction, oc);
-    lowp float c = dot(oc, oc) - radius * radius;
-    lowp float d = b * b - 4.0 * a * c;
-    if (d < 0.0) {
-        return -1.0;
-    }
-    lowp float qd = sqrt(d);
-    lowp float t = (-qd - b) / 2.0 / a;
-    if (t >= 0.0) {
-        return t;
-    }
-    t = (qd - b) / 2.0 / a;
-    if (t > 0.0) {
-        return t;
-    }
-    return -1.0;
-}
-
-*/
 const {vec3: Vec3} = require('gl-matrix');
-const length = Math.hypot;
+const sqrt = Math.sqrt;
 
 const sub = (a, b) => {
     const c = Vec3.create();
@@ -40,10 +11,12 @@ const sub = (a, b) => {
 const dot = (a, b) => {
     return Vec3.dot(a, b);
 }
+const er = 6371e3;
+const ar = 6471e3;
 
 function rsi(origin, direction, radius) {
     const center = Vec3.create();
-    const os = sub(origin, center);
+    const oc = sub(origin, center);
     const a = dot(direction, direction);
     const b = 2 * dot(direction, oc);
     const c = dot(oc, oc) - radius * radius;
@@ -66,3 +39,22 @@ function rsi(origin, direction, radius) {
     console.log('no res')
     return -1;
 }
+
+console.log(rsi(
+    [0, 0, er],
+    [-0.522657779758489, -0.7233261840096428, 0.4512516778738614],
+    ar
+));
+
+console.log(rsi(
+    [0, 0, er],
+    [0.7542687324870708, -0.6561626163473974, 0.023006522998613093],
+    ar
+));
+
+console.log(rsi(
+    [0, 0, er],
+    [0.7881026349933807, -0.6155431574478489, 0.0009263021228666318],
+    ar
+));
+console.log(sqrt(ar * ar - er * er))
