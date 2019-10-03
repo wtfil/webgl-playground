@@ -11,7 +11,7 @@ uniform int useRefraction;
 uniform int useReflection;
 uniform lowp vec3 directionalLightVector;
 
-const lowp float waterDistortionStrenth = 0.03;
+const lowp float waterDistortionStrenth = 0.02;
 const lowp float fresnelStrength = 1.5;
 const lowp float waterReflectivity = 0.5;
 const lowp vec3 sunlightColor = vec3(1.0, 1.0, 1.0);

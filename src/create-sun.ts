@@ -37,7 +37,7 @@ function createRender(context: Context) {
         sunPosition: Vec3,
         flip?: boolean
     }) {
-        const domeRadius = 2000;
+        const domeRadius = 1000;
         const {gl, program, sun} = context;
         const {
             cameraPosition,
@@ -53,6 +53,7 @@ function createRender(context: Context) {
             flip,
             far: domeRadius * 2
         });
+        Mat4.translate(model, model, cameraPosition);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(program.program);
@@ -69,6 +70,12 @@ function createRender(context: Context) {
             program.uniforms.sunPosition,
             sunPosition
         );
+
+        gl.uniform3fv(
+            program.uniforms.cameraPosition,
+            cameraPosition
+        );
+
         gl.uniformMatrix4fv(
             program.uniforms.projection,
             false,
@@ -87,7 +94,6 @@ function createRender(context: Context) {
             model
         );
 
-        gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
         gl.disable(gl.BLEND);
@@ -153,11 +159,12 @@ export function sunTimeToString(t: number) {
 
 export function getSunPosition(n: number) {
     const t = n % (24 * 3600 * 1000);
-    const altitude = getAltitude(t) / 2;
+    const altitude = getAltitude(t);
     const azimuth = getAzimuth(t);
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
     const z = sin(altitude);
+    // console.log([x, -y, z]);
     return {
         altitude,
         azimuth,

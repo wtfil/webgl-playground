@@ -7,6 +7,6 @@ uniform lowp mat4 projection;
 varying lowp vec4 worldPosition;
 
 void main() {
-    worldPosition = model * position;
-    gl_Position = projection * view * worldPosition;
+    worldPosition = position;
+    gl_Position = projection * view * model * worldPosition;
 }

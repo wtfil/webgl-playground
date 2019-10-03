@@ -10,8 +10,8 @@ function createShader(gl: WebGLRenderingContext, type: number, source: string) {
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.log(source);
         console.warn(gl.getShaderInfoLog(shader));
-        console.warn(source);
         gl.deleteShader(shader);
         return null;
     }

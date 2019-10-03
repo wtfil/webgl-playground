@@ -20,6 +20,7 @@ async function setup() {
     const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
+    // canvas.style.cursor = 'none';
     const gl = canvas.getContext('experimental-webgl') as WebGLRenderingContext;
     if (!gl) {
         console.warn('Can not create webgl context');
@@ -114,6 +115,12 @@ async function setup() {
         })
         .on('moveSun', e => {
             properties.sunTime += e.ds;
+            const DAY = 24 * 3600 * 1000;
+            if (properties.sunTime < 0) {
+                properties.sunTime += DAY;
+            } else if (properties.sunTime > DAY) {
+                properties.sunTime -= DAY;
+            }
         })
     
     function render() {
@@ -121,6 +128,7 @@ async function setup() {
             return requestAnimationFrame(render);
         }
         const time = Date.now() - properties.start;
+        properties.sunTime += 3e5;
         const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
         const directionalLightVector = Vec3.create();
         Vec3.negate(directionalLightVector, sunPosition);
