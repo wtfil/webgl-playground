@@ -8,17 +8,14 @@ const lowp float si = 22.0; // sun intencity
 
 const lowp float earthRadius = 6371e3;
 const lowp float atmosphereRadius = 6471e3;
-const lowp float rsh = 8.5e3; // Raylish scale height
-const lowp float msh = 1.2e3; // Mei scale height
+const lowp float rsh = 8.5e3; // Rayleigh scale height
+const lowp float msh = 1.2e3; // Mie scale height
 
-// const lowp vec3 rsc = vec3(5.2e-6, 12.e-6, 29.6e-6); // Raylish scattering coefficient // https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/
-const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Raylish scattering coefficient
-// const lowp vec3 rsc = vec3(3.1e-7, 7.2e-7, 17.69e-7); // Raylish scattering coefficient
-const lowp float msc = 22e-6; // Mei scattering coefficient
-// const lowp float msc = 0.0; // Mei scattering coefficient
+const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficient
+const lowp float msc = 21e-6; // Mie scattering coefficient
 
-const lowp float gr = 0.0; // Raylish simetry constant
-const lowp float gm = -0.75; // Mei simetry constant
+const lowp float gr = 0.0; // Rayleigh simetry constant
+const lowp float gm = 0.76; // Mie simetry constant
 
 varying lowp vec4 worldPosition;
 varying lowp vec4 sunView;
@@ -31,7 +28,7 @@ lowp float phase(
     lowp float a
 ) {
     lowp float g2 = g * g;
-    return 3.0 * (1.0 - g2)  * (1.0 + a * a) / 2.0 / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * a, 1.5);
+    return 3.0 * (1.0 - g2)  * (1.0 + a * a) / 8.0 / PI / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * a, 1.5);
 }
 
 lowp vec3 translate(lowp vec3 dir) {
@@ -56,12 +53,11 @@ lowp vec3 translate(lowp vec3 dir) {
 }
 
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
-lowp float rsi(
+lowp float dtse(
     lowp vec3 origin,
     lowp vec3 direction,
     lowp float radius
 ) {
-    // return length(direction - origin) * 1e-1;
     lowp vec3 center = vec3(0.0); // could be used as parameter
     lowp vec3 oc = origin - center;
     lowp float a = dot(direction, direction);
@@ -101,24 +97,21 @@ void main() {
     lowp vec3 ray = normalize(position - camera);
     lowp vec3 sun = normalize(sunPosition);
 
-    // lowp float far = length(position - camera);
-    lowp float far = rsi(camera, ray, atmosphereRadius);
+    lowp float far = dtse(camera, ray, atmosphereRadius);
 
     lowp float lightAngle = dot(ray, sun);
     lowp float rshFactor = phase(gr, lightAngle);
-    lowp float meiFactor = phase(gm, lightAngle);
+    lowp float mieFactor = phase(gm, lightAngle);
 
-    // lowp vec3 totalLightAccumulated = vec3(0.0);
     lowp float sampleSize = far / float(samples);
     lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
-    lowp vec3 sunColor = getSunColor(sun, world);
     lowp float rshOpticalDepth = 0.0;
-    lowp float meiOpticalDepth = 0.0;
+    lowp float mieOpticalDepth = 0.0;
     lowp vec3 rshAccumulated = vec3(0.0);
-    lowp vec3 meiAccumulated = vec3(0.0);
+    lowp vec3 mieAccumulated = vec3(0.0);
 
     for (int i = 0; i < samples; i ++) {
-        lowp float far2 = rsi(
+        lowp float far2 = dtse(
             samplePoint,
             sun,
             atmosphereRadius
@@ -126,60 +119,46 @@ void main() {
         lowp float sampleSize2 = far2 / float(samples);
         lowp vec3 samplePoint2 = samplePoint + sampleSize2 / 2.0 * sun;
         lowp float rshOpticalDepth2 = 0.0;
-        lowp float meiOpticalDepth2 = 0.0;
+        lowp float mieOpticalDepth2 = 0.0;
 
         for (int j = 0; j < samples; j ++) {
             lowp float height = length(samplePoint2) - earthRadius;
             lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize2;
-            lowp float meiOpticalDepthStep = exp(-height / msh) * sampleSize2;
+            lowp float mieOpticalDepthStep = exp(-height / msh) * sampleSize2;
 
             rshOpticalDepth2 += rshOpticalDepthStep;
-            meiOpticalDepth2 += meiOpticalDepthStep;
+            mieOpticalDepth2 += mieOpticalDepthStep;
 
             samplePoint2 += sun * sampleSize2;
         }
 
         lowp float height = length(samplePoint) - earthRadius;
         lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
-        lowp float meiOpticalDepthStep = exp(-height / msh) * sampleSize;
+        lowp float mieOpticalDepthStep = exp(-height / msh) * sampleSize;
 
         rshOpticalDepth += rshOpticalDepthStep;
-        meiOpticalDepth += meiOpticalDepthStep;
+        mieOpticalDepth += mieOpticalDepthStep;
 
         lowp vec3 outScattering = exp(
             -rsc * (rshOpticalDepth + rshOpticalDepth2)
-            -msc * (meiOpticalDepth + meiOpticalDepth2)
+            -msc * (mieOpticalDepth + mieOpticalDepth2)
         );
 
-        outScattering *= 1e-1;
-
         rshAccumulated += rshOpticalDepthStep * outScattering;
-        meiAccumulated += meiOpticalDepthStep * outScattering;
-
-        // lowp vec3 inScattering = (
-        //     + rshFactor * rsc * rshOpticalDepthStep
-        //     + meiFactor * msc * meiOpticalDepthStep
-        // );
-
-        // totalLightAccumulated += outScattering * inScattering;
+        mieAccumulated += mieOpticalDepthStep * outScattering;
 
         samplePoint += ray * sampleSize;
     }
 
     lowp vec3 color = vec3(0.0);
 
-    // color += si * totalLightAccumulated * 1e-1;
-
-    color += si * (
+    lowp vec3 sunColor = getSunColor(sun, world);
+    lowp vec3 totalLight = si * (
         rshFactor * rsc * rshAccumulated +
-        meiFactor * msc * meiAccumulated
+        mieFactor * msc * mieAccumulated
     );
-
-    // color += si * (
-    //     rshFactor * rsc * rshAccumulated +
-    //     meiFactor * msc * meiAccumulated
-    // );
-
+    // color += totalLight;
+    color += 1.0 - exp(-1.0 * totalLight);
     color += sunColor;
 
     gl_FragColor = vec4(color, 1.0);

@@ -128,6 +128,7 @@ async function setup() {
             return requestAnimationFrame(render);
         }
         const time = Date.now() - properties.start;
+        properties.sunTime += 3e5;
         const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
         const directionalLightVector = Vec3.create();
         Vec3.negate(directionalLightVector, sunPosition);
