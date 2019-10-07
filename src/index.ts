@@ -10,7 +10,7 @@ import {ProgramProperties, Unpacked} from './types';
 
 window.addEventListener('load', setup);
 
-const SIZE = Math.min(window.innerWidth, window.innerHeight);
+const SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const WATER_SIZE = SIZE * 2;
@@ -20,7 +20,6 @@ async function setup() {
     const canvas = document.querySelector('canvas')!;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-    // canvas.style.cursor = 'none';
     const gl = canvas.getContext('experimental-webgl') as WebGLRenderingContext;
     if (!gl) {
         console.warn('Can not create webgl context');
@@ -64,6 +63,9 @@ async function setup() {
         .on('toggleRenderSun', () => {
             properties.renderSun = !properties.renderSun;
         })
+        .on('toggleAutoSunMove', () => {
+            properties.autoSunMove = !properties.autoSunMove;
+        })
         .on('zoom', e => {
             const {cameraPosition, center} = properties;
             const eye = Vec3.create();
@@ -97,7 +99,7 @@ async function setup() {
             }
 
             Vec3.normalize(move, move);
-            Vec3.scale(move, move, 3);
+            Vec3.scale(move, move, 6);
             Vec3.add(cameraPosition, cameraPosition, move)
             Vec3.add(center, center, move);
         })
@@ -128,7 +130,9 @@ async function setup() {
             return requestAnimationFrame(render);
         }
         const time = Date.now() - properties.start;
-        properties.sunTime += 3e5;
+        if (properties.autoSunMove) {
+            properties.sunTime += 3e5;
+        }
         const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
         const directionalLightVector = Vec3.create();
         Vec3.negate(directionalLightVector, sunPosition);

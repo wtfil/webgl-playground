@@ -64,6 +64,9 @@ export function initControls(elem: HTMLElement) {
             case '5':
                 ee.emit('toggleRenderSun');
                 break;
+            case '6':
+                ee.emit('toggleAutoSunMove');
+                break;
             default:
                 pressed[e.key] = true;
         }

@@ -13,6 +13,7 @@ export interface ProgramProperties {
     useRefraction: boolean;
     useReflection: boolean;
 
+    autoSunMove: boolean;
     sunTime: number;
     azimuth?: number;
     altitude?: number;

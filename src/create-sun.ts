@@ -144,8 +144,6 @@ function getAltitude(t: number) {
     return tan(-4.83049e-16 * t * t + 4.21414e-8 * t - 0.420437);
 }
 
-const DAY_SPEED = 4e-3;
-
 function pad2(st: string | number) {
     return ('00' + st).slice(-2);
 }
@@ -164,7 +162,6 @@ export function getSunPosition(n: number) {
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
     const z = sin(altitude);
-    // console.log([x, -y, z]);
     return {
         altitude,
         azimuth,
