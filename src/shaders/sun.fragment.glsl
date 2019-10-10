@@ -8,14 +8,14 @@ const lowp float si = 22.0; // sun intencity
 
 const lowp float earthRadius = 6371e3;
 const lowp float atmosphereRadius = 6471e3;
-const lowp float rsh = 8.5e3; // Rayleigh scale height
+const lowp float rsh = 8.0e3; // Rayleigh scale height
 const lowp float msh = 1.2e3; // Mie scale height
 
 const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficient
 const lowp float msc = 21e-6; // Mie scattering coefficient
 
 const lowp float gr = 0.0; // Rayleigh simetry constant
-const lowp float gm = 0.76; // Mie simetry constant
+const lowp float gm = 0.758; // Mie simetry constant
 
 varying lowp vec4 worldPosition;
 varying lowp vec4 sunView;
@@ -35,21 +35,21 @@ lowp vec3 translate(lowp vec3 dir) {
     lowp float r1 = earthRadius;
     lowp float r2 = atmosphereRadius;
 
-    // lowp float al0 = asin(dir.z);
-    // lowp float az0 = atan(dir.y / dir.x);
-    // if (dir.x < 0.0) {
-    //     az0 += PI;
-    // }
-    // lowp float al1 = asin(r1 / r2);
-    // lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
-    // return vec3(
-    //     cos(al2) * cos(az0),
-    //     cos(al2) * sin(az0),
-    //     sin(al2)
-    // );
-    lowp float r3 = sqrt(r2 * r2 - r1 * r1);
-    lowp float a = r3 / r2;
-    return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));               
+    lowp float al0 = asin(dir.z);
+    lowp float az0 = atan(dir.y / dir.x);
+    if (dir.x < 0.0) {
+        az0 += PI;
+    }
+    lowp float al1 = asin(r1 / r2);
+    lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
+    return vec3(
+        cos(al2) * cos(az0),
+        cos(al2) * sin(az0),
+        sin(al2)
+    );
+    // lowp float r3 = sqrt(r2 * r2 - r1 * r1);
+    // lowp float a = r3 / r2;
+    // return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));               
 }
 
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
@@ -87,7 +87,7 @@ lowp vec3 getSunColor(
         sun,
         position
     ));
-    return vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, angle * 8.0));
+    return vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, angle * 20.0));
 }
 
 void main() {
@@ -152,6 +152,8 @@ void main() {
 
     lowp vec3 color = vec3(0.0);
 
+    // mieAccumulated *= 0.0;
+    // rshAccumulated *= 0.5;
     lowp vec3 sunColor = getSunColor(sun, world);
     lowp vec3 totalLight = si * (
         rshFactor * rsc * rshAccumulated +

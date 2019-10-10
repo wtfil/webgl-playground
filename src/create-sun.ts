@@ -54,6 +54,7 @@ function createRender(context: Context) {
             far: domeRadius * 2
         });
         Mat4.translate(model, model, cameraPosition);
+        Mat4.translate(model, model, [0, 0, -150]);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(program.program);
