@@ -48,6 +48,7 @@ function createRender(context: Context) {
         terrainScale?: number[]
         clipLevel?: number,
         flip?: boolean,
+        directionalLightColor: Vec3,
         directionalLightVector: Vec3
     }) {
         const {gl, terrain, program} = context;
@@ -59,7 +60,8 @@ function createRender(context: Context) {
             clipLevel = 0,
             flip = false,
             terrainScale = [1, 1, 1],
-            directionalLightVector
+            directionalLightVector,
+            directionalLightColor
         } = opts;
         const {projection, model, view} = createMatrices({
             cameraPosition,
@@ -93,6 +95,7 @@ function createRender(context: Context) {
         );
 
         gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
+        gl.uniform3fv(program.uniforms.directionalLightColor, directionalLightColor);
         gl.uniform1f(program.uniforms.clipDirection, clipDirection);
         gl.uniform1f(program.uniforms.clipLevel, clipLevel);
 

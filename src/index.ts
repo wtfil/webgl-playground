@@ -139,15 +139,16 @@ async function setup() {
         if (properties.autoSunMove) {
             properties.sunTime += 3e5;
         }
-        const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
-        const directionalLightVector = Vec3.create();
-        Vec3.negate(directionalLightVector, sunPosition);
+        const {
+            sunPosition,
+            directionalLightColor,
+            directionalLightVector
+        } = getSunPosition(properties.sunTime);
         Object.assign(properties, {
             time,
             sunPosition,
             directionalLightVector,
-            azimuth,
-            altitude
+            directionalLightColor
         });
         drawScene({
             gl: gl!,
