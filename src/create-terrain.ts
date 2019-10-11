@@ -18,11 +18,11 @@ export async function createTerrain(
     opts: {
         heatmap: string,
         height: number,
-        size: number,
-        baseLevel?: number
+        chunkSize: number,
+        baseLevel?: number,
     }
 ) {
-    const arrays = await createArrays(opts.heatmap, opts.height, opts.size, opts.baseLevel);
+    const arrays = await createArrays(opts.heatmap, opts.height, opts.chunkSize, opts.baseLevel);
     const program = createProgram(
         gl,
         terrainVertextShaderSource,
@@ -45,6 +45,7 @@ function createRender(context: Context) {
         center: Vec3,
         aspect: number,
         clipDirection?: -1 | 1 | 0,
+        terrainScale?: number[]
         clipLevel?: number,
         flip?: boolean,
         directionalLightVector: Vec3
@@ -57,6 +58,7 @@ function createRender(context: Context) {
             clipDirection = 0,
             clipLevel = 0,
             flip = false,
+            terrainScale = [1, 1, 1],
             directionalLightVector
         } = opts;
         const {projection, model, view} = createMatrices({
@@ -65,6 +67,8 @@ function createRender(context: Context) {
             aspect,
             flip
         });
+
+        Mat4.scale(model, model, terrainScale);
 
         gl.useProgram(program.program);
         bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);
@@ -144,11 +148,15 @@ async function createArrays(src: string, maxHeight: number, size: number, baseLe
         for (let j = 0; j < width; j++) {
             const k = i * width + j
             const c = heatmap[k] / max;
+            if (!Number.isFinite(c)) {
+                console.log({i, j, c})
+            }
             position.push(
-                j - width / 2,
-                i - height / 2,
-                heatmap[k] - baseLevel
-            );
+                j / width - 0.5,
+                i / height - 0.5,
+                // base level probably should be as the part of transition
+                (heatmap[k] - baseLevel) / max
+            )
             colors.push(c, c, c, 1)
 
             if ((i !== height - 1) && (j !== width - 1)) {

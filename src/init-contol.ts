@@ -4,6 +4,7 @@ export function initControls(elem: HTMLElement) {
     let mousedown = false;
     let pressed: {[key: string]: boolean} = {};
     const ee = new EventEmitter();
+    const SPACE = ' ';
     const pullKeys = () => {
         let left = 0;
         let forward = 0;
@@ -32,6 +33,11 @@ export function initControls(elem: HTMLElement) {
         }
         if (ds) {
             ee.emit('moveSun', {ds});
+        }
+        if (pressed.e) {
+            ee.emit('moveVertically', {dy: 1});
+        } if (pressed.q) {
+            ee.emit('moveVertically', {dy: -1});
         }
 
         requestAnimationFrame(pullKeys);

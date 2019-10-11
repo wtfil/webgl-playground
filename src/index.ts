@@ -14,7 +14,7 @@ const SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const WATER_SIZE = SIZE * 2;
-const DETAILS_LEVEL = 5;
+const DETAILS_LEVEL = 4;
 
 async function setup() {
     const canvas = document.querySelector('canvas')!;
@@ -29,10 +29,10 @@ async function setup() {
     let pageIsVisible = true;
 
     const terrain = await createTerrain(gl, {
-        heatmap: 'heightmaps/mountain2.png',
+        heatmap: 'heightmaps/terrain4.png',
         height: 500 / DETAILS_LEVEL,
-        size: DETAILS_LEVEL,
-        baseLevel: 50 / DETAILS_LEVEL
+        chunkSize: 20 / DETAILS_LEVEL,
+        baseLevel: 50 / DETAILS_LEVEL,
     });
 
     const water = await createWater(gl, {
@@ -103,6 +103,12 @@ async function setup() {
             Vec3.add(cameraPosition, cameraPosition, move)
             Vec3.add(center, center, move);
         })
+        .on('moveVertically', e => {
+            const {cameraPosition, center} = properties;
+            const add = [0, 0, e.dy * 3];
+            Vec3.add(cameraPosition, cameraPosition, add);
+            Vec3.add(center, center, add);
+        })
         .on('rotateCamera', e => {
             const {dx, dy} = e;
             const {cameraPosition, center} = properties;
@@ -165,6 +171,7 @@ function drawScene(props: {
     sun: Unpacked<ReturnType<typeof createSun>>
 }) {
     const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
+    const terrainScale = [WATER_SIZE, WATER_SIZE, 100];
     const {
         gl,
         terrain,
@@ -174,6 +181,7 @@ function drawScene(props: {
     } = props;
     const opts = {
         ...properties,
+        terrainScale,
         aspect
     }
 
