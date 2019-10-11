@@ -10,11 +10,11 @@ uniform lowp float dudvOffset;
 uniform int useRefraction;
 uniform int useReflection;
 uniform lowp vec3 directionalLightVector;
+uniform lowp vec3 directionalLightColor;
 
 const lowp float waterDistortionStrenth = 0.02;
 const lowp float fresnelStrength = 1.5;
 const lowp float waterReflectivity = 0.5;
-const lowp vec3 sunlightColor = vec3(1.0, 1.0, 1.0);
 const lowp vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
 // const lowp vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
 const lowp float shineDamper = 20.0;
@@ -51,7 +51,7 @@ void main() {
     lowp vec3 reflectedLight = reflect(normalize(directionalLightVector), normal);
     lowp float specular = max(dot(reflectedLight, toCamera), 0.0);
     specular = pow(specular, shineDamper);
-    lowp vec3 specularHighlights = sunlightColor * specular * waterReflectivity;
+    lowp vec3 specularHighlights = directionalLightColor * specular * waterReflectivity;
 
     // color
     lowp vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
@@ -66,5 +66,5 @@ void main() {
     }
     gl_FragColor = mix(gl_FragColor, shallowWaterColor, 0.2);
 
-    gl_FragColor = gl_FragColor + vec4(specularHighlights, 0.0);
+    gl_FragColor = gl_FragColor + vec4(specularHighlights, 1.0);
 }

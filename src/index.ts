@@ -14,7 +14,7 @@ const SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const WATER_SIZE = SIZE * 2;
-const DETAILS_LEVEL = 5;
+const DETAILS_LEVEL = 4;
 
 async function setup() {
     const canvas = document.querySelector('canvas')!;
@@ -29,10 +29,10 @@ async function setup() {
     let pageIsVisible = true;
 
     const terrain = await createTerrain(gl, {
-        heatmap: 'heightmaps/mountain2.png',
+        heatmap: 'heightmaps/terrain4.png',
         height: 500 / DETAILS_LEVEL,
-        size: DETAILS_LEVEL,
-        baseLevel: 50 / DETAILS_LEVEL
+        chunkSize: 20 / DETAILS_LEVEL,
+        baseLevel: 50 / DETAILS_LEVEL,
     });
 
     const water = await createWater(gl, {
@@ -103,6 +103,12 @@ async function setup() {
             Vec3.add(cameraPosition, cameraPosition, move)
             Vec3.add(center, center, move);
         })
+        .on('moveVertically', e => {
+            const {cameraPosition, center} = properties;
+            const add = [0, 0, e.dy * 3];
+            Vec3.add(cameraPosition, cameraPosition, add);
+            Vec3.add(center, center, add);
+        })
         .on('rotateCamera', e => {
             const {dx, dy} = e;
             const {cameraPosition, center} = properties;
@@ -133,15 +139,16 @@ async function setup() {
         if (properties.autoSunMove) {
             properties.sunTime += 3e5;
         }
-        const {sunPosition, altitude, azimuth} = getSunPosition(properties.sunTime);
-        const directionalLightVector = Vec3.create();
-        Vec3.negate(directionalLightVector, sunPosition);
+        const {
+            sunPosition,
+            directionalLightColor,
+            directionalLightVector
+        } = getSunPosition(properties.sunTime);
         Object.assign(properties, {
             time,
             sunPosition,
             directionalLightVector,
-            azimuth,
-            altitude
+            directionalLightColor
         });
         drawScene({
             gl: gl!,
@@ -165,6 +172,7 @@ function drawScene(props: {
     sun: Unpacked<ReturnType<typeof createSun>>
 }) {
     const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
+    const terrainScale = [WATER_SIZE, WATER_SIZE, 100];
     const {
         gl,
         terrain,
@@ -174,12 +182,12 @@ function drawScene(props: {
     } = props;
     const opts = {
         ...properties,
+        terrainScale,
         aspect
     }
 
 
     gl.clearDepth(1.0);
-    gl.clearColor(0.53, 0.8, 0.98, 1.);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -198,6 +206,8 @@ function drawScene(props: {
                     ...opts,
                     flip: true
                 });
+            } else {
+                 gl.clearColor(0.53, 0.8, 0.98, 1.); 
             }
         })
         water.updateRefractionTexture(() => {
@@ -212,13 +222,13 @@ function drawScene(props: {
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (properties.renderSun) {
-        sun.render(opts);
+    if (properties.renderTerrain) {
+        terrain.render(opts)
     }
     if (properties.renderWater) {
         water.render(opts);
     }
-    if (properties.renderTerrain) {
-        terrain.render(opts)
+    if (properties.renderSun) {
+        sun.render(opts);
     }
 }

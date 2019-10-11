@@ -113,6 +113,7 @@ function createRender(context: Context) {
         center: Vec3,
         aspect: number,
         directionalLightVector: Vec3,
+        directionalLightColor: Vec3,
         time: number,
         useRefraction: boolean,
         useReflection: boolean
@@ -124,7 +125,8 @@ function createRender(context: Context) {
             time,
             useReflection,
             useRefraction,
-            directionalLightVector
+            directionalLightVector,
+            directionalLightColor
         } = opts;
         const {projection, model, view} = createMatrices({
             cameraPosition,
@@ -144,6 +146,7 @@ function createRender(context: Context) {
         gl.uniform1i(program.uniforms.useReflection, Number(useReflection));
         gl.uniform3fv(program.uniforms.cameraPosition, cameraPosition);
         gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
+        gl.uniform3fv(program.uniforms.directionalLightColor, directionalLightColor);
         gl.uniformMatrix4fv(
             program.uniforms.projection,
             false,

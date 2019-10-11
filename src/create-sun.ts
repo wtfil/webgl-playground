@@ -1,6 +1,6 @@
 import Vec3 = require('gl-matrix/vec3');
 import Mat4 = require('gl-matrix/mat4');
-import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer} from './utils';
+import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer, inRange} from './utils';
 
 import sunVertextShaderSource from './shaders/sun.vertex.glsl';
 import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
@@ -54,6 +54,7 @@ function createRender(context: Context) {
             far: domeRadius * 2
         });
         Mat4.translate(model, model, cameraPosition);
+        Mat4.translate(model, model, [0, 0, -170]);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
         gl.useProgram(program.program);
@@ -162,9 +163,17 @@ export function getSunPosition(n: number) {
     const x = cos(altitude) * cos(azimuth);
     const y = cos(altitude) * sin(azimuth);
     const z = sin(altitude);
+
+    const sunPosition = Vec3.fromValues(x, -y, z);
+    const directionalLightColor = Vec3.fromValues(1, 1, 1);
+    const directionalLightVector = Vec3.create();
+    const lightAttenuation = inRange(z * 2, 0, 1) // use scattering algorithm for this
+    Vec3.negate(directionalLightVector, sunPosition);
+    Vec3.scale(directionalLightColor, directionalLightColor, lightAttenuation);
+
     return {
-        altitude,
-        azimuth,
-        sunPosition: Vec3.fromValues(x, -y, z)
+        sunPosition: Vec3.fromValues(x, -y, z),
+        directionalLightColor,
+        directionalLightVector
     };
 }
