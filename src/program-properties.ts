@@ -1,6 +1,8 @@
 import Vec3 = require('gl-matrix/vec3');
 import {ProgramProperties} from './types';
 
+const LOCAL_STORAGE_KEY = 'dev-properties';
+
 const DEFAULT_PROPERTIES: ProgramProperties = {
     center: Vec3.fromValues(-462, -206, 157),
     cameraPosition: Vec3.fromValues(248, -326, 58),
@@ -10,15 +12,19 @@ const DEFAULT_PROPERTIES: ProgramProperties = {
     start: Date.now(),
     sunTime: 12 * 3600 * 1000,
     time: 0,
-    renderWater: false,
+    renderWater: true,
     renderTerrain: true,
     useReflection: true,
     useRefraction: true,
     
     renderSun: true,
-    autoSunMove: false
+    autoSunMove: true
 };
 
 export function initProperties(): ProgramProperties {
-    return DEFAULT_PROPERTIES
+    const props = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return props ? {
+        ...DEFAULT_PROPERTIES,
+        ...JSON.parse(props)
+    } : DEFAULT_PROPERTIES
 }

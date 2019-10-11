@@ -41,15 +41,12 @@ lowp vec3 translate(lowp vec3 dir) {
         az0 += PI;
     }
     lowp float al1 = asin(r1 / r2);
-    lowp float al2 = al1 + (PI_2 - al1) * (al0 / PI_2);
+    lowp float al2 = al1 + (1.0 - al1 / PI_2) * al0;
     return vec3(
         cos(al2) * cos(az0),
         cos(al2) * sin(az0),
         sin(al2)
     );
-    // lowp float r3 = sqrt(r2 * r2 - r1 * r1);
-    // lowp float a = r3 / r2;
-    // return vec3(dir.xy * a, sqrt(1.0 - pow(a * (1.0 - dir.z * dir.z), 2.0)));               
 }
 
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/

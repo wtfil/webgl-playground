@@ -187,7 +187,6 @@ function drawScene(props: {
 
 
     gl.clearDepth(1.0);
-    gl.clearColor(0.53, 0.8, 0.98, 1.);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -206,6 +205,8 @@ function drawScene(props: {
                     ...opts,
                     flip: true
                 });
+            } else {
+                 gl.clearColor(0.53, 0.8, 0.98, 1.); 
             }
         })
         water.updateRefractionTexture(() => {
@@ -220,13 +221,13 @@ function drawScene(props: {
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (properties.renderSun) {
-        sun.render(opts);
+    if (properties.renderTerrain) {
+        terrain.render(opts)
     }
     if (properties.renderWater) {
         water.render(opts);
     }
-    if (properties.renderTerrain) {
-        terrain.render(opts)
+    if (properties.renderSun) {
+        sun.render(opts);
     }
 }
