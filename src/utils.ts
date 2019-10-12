@@ -1,6 +1,7 @@
 import Mat4 = require('gl-matrix/mat4');
 import Vec3 = require('gl-matrix/vec3');
 import {Program, BufferObject} from './types';
+import {State} from './store';
 
 function createShader(gl: WebGLRenderingContext, type: number, source: string) {
     const shader = gl.createShader(type);
@@ -93,8 +94,7 @@ export function createProgram(
 }
 
 export function createMatrices(opts: {
-    cameraPosition: Vec3,
-    center: Vec3,
+    camera: State['camera'],
     aspect: number,
     flip?: boolean,
     far?: number
@@ -110,8 +110,8 @@ export function createMatrices(opts: {
         opts.far || 2000
     );
 
-    const camera = Vec3.clone(opts.cameraPosition);
-    const center = Vec3.clone(opts.center);
+    const camera = Vec3.clone(opts.camera.position);
+    const center = Vec3.clone(opts.camera.center);
     if (opts.flip) {
         center[2] = -center[2];
         camera[2] = -camera[2];

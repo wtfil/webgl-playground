@@ -3,10 +3,9 @@ import Vec3 = require('gl-matrix/vec3');
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun, getSunPosition} from './create-sun';
-import {initProperties} from './program-properties';
-import {inRange} from './utils';
-import {ProgramProperties, Unpacked} from './types';
+import {createSun} from './create-sun';
+import {Unpacked} from './types';
+import {getInitialState, toggle, zoom, moveCameraHorizontaly, moveCameraVertically, rorateCamera, moveSun, autoMoveSun, updateWaterTime, State} from './store';
 
 window.addEventListener('load', setup);
 
@@ -26,8 +25,6 @@ async function setup() {
         return;
     }
 
-    let pageIsVisible = true;
-
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/terrain4.png',
         height: 500 / DETAILS_LEVEL,
@@ -41,118 +38,32 @@ async function setup() {
 
     const sun = createSun(gl);
 
-    const properties = initProperties();
+    const state = getInitialState();
     const emitter = initControls(canvas);
 
     emitter
-        .on('visability', e => {
-            pageIsVisible = e.visible;
-        })
-        .on('toggleRenderWater', () => {
-            properties.renderWater = !properties.renderWater;
-        })
-        .on('toggleRenderTerrain', () => {
-            properties.renderTerrain = !properties.renderTerrain;
-        })
-        .on('toggleRefraction', () => {
-            properties.useRefraction = !properties.useRefraction;
-        })
-        .on('toggleReflection', () => {
-            properties.useReflection = !properties.useReflection;
-        })
-        .on('toggleRenderSun', () => {
-            properties.renderSun = !properties.renderSun;
-        })
-        .on('toggleAutoSunMove', () => {
-            properties.autoSunMove = !properties.autoSunMove;
-        })
-        .on('zoom', e => {
-            const {cameraPosition, center} = properties;
-            const eye = Vec3.create();
-            const distance = Vec3.distance(center, cameraPosition);
-            const nextDistance = inRange(distance + e.dy, 50, 1000);
-            Vec3.sub(eye, cameraPosition, center);
-            Vec3.scale(eye, eye, nextDistance / distance);
-            Vec3.add(cameraPosition, center, eye);
-        })
-        .on('moveCamera', e => {
-            const {cameraPosition, center} = properties;
-            const {forward, left} = e;
-            const forwardMove = Vec3.create();
-            const leftMove = Vec3.create();
-            const move = Vec3.create();
-            Vec3.sub(forwardMove, center, cameraPosition);
-            Vec3.rotateZ(leftMove, forwardMove, [0, 0, 1], Math.PI / 2);
-            leftMove[2] = 0;
-
-            if (forward === 1) {
-                Vec3.add(move, move, forwardMove);
-            }
-            if (forward === -1) {
-                Vec3.sub(move, move, forwardMove);
-            }
-            if (left === 1) {
-                Vec3.add(move, move, leftMove);
-            }
-            if (left === -1) {
-                Vec3.sub(move, move, leftMove);
-            }
-
-            Vec3.normalize(move, move);
-            Vec3.scale(move, move, 6);
-            Vec3.add(cameraPosition, cameraPosition, move)
-            Vec3.add(center, center, move);
-        })
-        .on('moveVertically', e => {
-            const {cameraPosition, center} = properties;
-            const add = [0, 0, e.dy * 3];
-            Vec3.add(cameraPosition, cameraPosition, add);
-            Vec3.add(center, center, add);
-        })
-        .on('rotateCamera', e => {
-            const {dx, dy} = e;
-            const {cameraPosition, center} = properties;
-            const eye = Vec3.create();
-            Vec3.sub(eye, center, cameraPosition);
-            const length = Vec3.length(eye);
-            Vec3.rotateZ(eye, eye, [0, 0, 0], dx * 2e-3);
-            eye[2] -= dy;
-            Vec3.normalize(eye, eye);
-            Vec3.scale(eye, eye, length);
-            Vec3.add(center, cameraPosition, eye);
-        })
-        .on('moveSun', e => {
-            properties.sunTime += e.ds;
-            const DAY = 24 * 3600 * 1000;
-            if (properties.sunTime < 0) {
-                properties.sunTime += DAY;
-            } else if (properties.sunTime > DAY) {
-                properties.sunTime -= DAY;
-            }
-        })
+        .on('visability', e => state.app.active = e.visability)
+        .on('toggleRenderWater', () => toggle(state, 'water', 'visible'))
+        .on('toggleRenderTerrain', () => toggle(state, 'terrain', 'visible'))
+        .on('toggleRefraction', () => toggle(state, 'water', 'useRefraction'))
+        .on('toggleReflection', () => toggle(state, 'water', 'useReflection'))
+        .on('toggleRenderSun', () => toggle(state, 'sky', 'visible'))
+        .on('toggleAutoSunMove', () => toggle(state, 'sky', 'autoSunMove'))
+        .on('zoom', e => zoom(state, e.dy))
+        .on('moveCamera', e => moveCameraHorizontaly(state, e.left, e.forward))
+        .on('moveVertically', e => moveCameraVertically(state, e.dy * 3))
+        .on('rotateCamera', e => rorateCamera(state, e.dx / 500, e.dy))
+        .on('moveSun', e => moveSun(state, e.ds))
     
     function render() {
-        if (!pageIsVisible) {
+        if (!state.app.active) {
             return requestAnimationFrame(render);
         }
-        const time = Date.now() - properties.start;
-        if (properties.autoSunMove) {
-            properties.sunTime += 3e5;
-        }
-        const {
-            sunPosition,
-            directionalLightColor,
-            directionalLightVector
-        } = getSunPosition(properties.sunTime);
-        Object.assign(properties, {
-            time,
-            sunPosition,
-            directionalLightVector,
-            directionalLightColor
-        });
+        updateWaterTime(state)
+        autoMoveSun(state, 3e5);
         drawScene({
             gl: gl!,
-            properties,
+            state,
             terrain,
             water,
             sun
@@ -166,7 +77,7 @@ async function setup() {
 
 function drawScene(props: {
     gl: WebGLRenderingContext,
-    properties: ProgramProperties,
+    state: State,
     terrain: Unpacked<ReturnType<typeof createTerrain>>,
     water: Unpacked<ReturnType<typeof createWater>>,
     sun: Unpacked<ReturnType<typeof createSun>>
@@ -178,30 +89,29 @@ function drawScene(props: {
         terrain,
         water,
         sun,
-        properties
+        state
     } = props;
     const opts = {
-        ...properties,
+        state,
         terrainScale,
         aspect
-    }
-
+    };
 
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    if (properties.renderWater) {
+    if (state.water.visible) {
         water.updateReflectionTexture(() => {
-            if (properties.renderTerrain) {
+            if (state.terrain.visible) {
                 terrain.render({
                     ...opts,
                     clipDirection: -1,
                     flip: true
                 })
             }
-            if (properties.renderSun) {
+            if (state.sky.visible) {
                 sun.render({
                     ...opts,
                     flip: true
@@ -211,7 +121,7 @@ function drawScene(props: {
             }
         })
         water.updateRefractionTexture(() => {
-            if (properties.renderTerrain) {
+            if (state.terrain.visible) {
                 terrain.render({
                     ...opts,
                     clipDirection: 1
@@ -222,13 +132,13 @@ function drawScene(props: {
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (properties.renderTerrain) {
+    if (state.terrain.visible) {
         terrain.render(opts)
     }
-    if (properties.renderWater) {
+    if (state.water.visible) {
         water.render(opts);
     }
-    if (properties.renderSun) {
+    if (state.sky.visible) {
         sun.render(opts);
     }
 }

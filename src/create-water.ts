@@ -5,6 +5,7 @@ import {Program, BufferObject} from './types';
 
 import waterVertextShaderSource from './shaders/water.vertex.glsl';
 import waterFragmentShaderSource from './shaders/water.fragment.glsl';
+import {State} from './store';
 
 interface Context {
     gl: WebGLRenderingContext,
@@ -109,28 +110,15 @@ function createRender(context: Context) {
     gl.uniform1i(program.uniforms.reflectionTexture, 3);
 
     return function render(opts: {
-        cameraPosition: Vec3,
-        center: Vec3,
+        state: State,
         aspect: number,
-        directionalLightVector: Vec3,
-        directionalLightColor: Vec3,
-        time: number,
-        useRefraction: boolean,
-        useReflection: boolean
     }) {
         const {
-            cameraPosition,
-            center,
-            aspect,
-            time,
-            useReflection,
-            useRefraction,
-            directionalLightVector,
-            directionalLightColor
+            state,
+            aspect
         } = opts;
         const {projection, model, view} = createMatrices({
-            cameraPosition,
-            center,
+            camera: state.camera,
             aspect
         });
 
@@ -141,12 +129,12 @@ function createRender(context: Context) {
         bindBuffer(gl, water.buffers.texture, program.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, water.buffers.indices);
 
-        gl.uniform1f(program.uniforms.dudvOffset, (time / 1000 * 0.03) % 1);
-        gl.uniform1i(program.uniforms.useRefraction, Number(useRefraction));
-        gl.uniform1i(program.uniforms.useReflection, Number(useReflection));
-        gl.uniform3fv(program.uniforms.cameraPosition, cameraPosition);
-        gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
-        gl.uniform3fv(program.uniforms.directionalLightColor, directionalLightColor);
+        gl.uniform1f(program.uniforms.dudvOffset, (state.water.time / 1000 * 0.03) % 1);
+        gl.uniform1i(program.uniforms.useRefraction, Number(state.water.useRefraction));
+        gl.uniform1i(program.uniforms.useReflection, Number(state.water.useReflection));
+        gl.uniform3fv(program.uniforms.cameraPosition, state.camera.position);
+        gl.uniform3fv(program.uniforms.directionalLightVector, state.light.direction);
+        gl.uniform3fv(program.uniforms.directionalLightColor, state.light.color);
         gl.uniformMatrix4fv(
             program.uniforms.projection,
             false,

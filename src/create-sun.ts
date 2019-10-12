@@ -5,6 +5,7 @@ import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer, inRange}
 import sunVertextShaderSource from './shaders/sun.vertex.glsl';
 import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
 import {Program, BufferObject} from './types';
+import {State} from './store';
 
 const {cos, sin, tan, PI} = Math;
 
@@ -31,29 +32,24 @@ export function createSun(gl: WebGLRenderingContext) {
 
 function createRender(context: Context) {
     return function render(opts: {
-        cameraPosition: Vec3,
-        center: Vec3,
+        state: State,
         aspect: number,
-        sunPosition: Vec3,
         flip?: boolean
     }) {
         const domeRadius = 1000;
         const {gl, program, sun} = context;
         const {
-            cameraPosition,
-            center,
+            state,
             aspect,
-            sunPosition,
             flip = false
         } = opts;
         const {projection, model, view} = createMatrices({
-            cameraPosition,
-            center,
+            camera: state.camera,
             aspect,
             flip,
             far: domeRadius * 2
         });
-        Mat4.translate(model, model, cameraPosition);
+        Mat4.translate(model, model, state.camera.position);
         Mat4.translate(model, model, [0, 0, -170]);
         Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
 
@@ -69,12 +65,12 @@ function createRender(context: Context) {
 
         gl.uniform3fv(
             program.uniforms.sunPosition,
-            sunPosition
+            state.sky.sunPosition
         );
 
         gl.uniform3fv(
             program.uniforms.cameraPosition,
-            cameraPosition
+            state.camera.position
         );
 
         gl.uniformMatrix4fv(

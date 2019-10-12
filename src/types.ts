@@ -1,22 +1,3 @@
-import {vec3 as Vec3} from 'gl-matrix';
-
-export interface ProgramProperties {
-    center: Vec3;
-    cameraPosition: Vec3,
-    sunPosition: Vec3;
-    directionalLightVector: Vec3;
-    directionalLightColor: Vec3;
-    renderSun: boolean;
-    start: number;
-    time: number;
-    renderWater: boolean;
-    renderTerrain: boolean;
-    useRefraction: boolean;
-    useReflection: boolean;
-
-    autoSunMove: boolean;
-    sunTime: number;
-}
 export interface BufferObject {
     buffers: {
         [key: string]: WebGLBuffer;
@@ -45,3 +26,8 @@ export type Unpacked<T> =
     T extends (...args: any[]) => infer U ? U :
     T extends Promise<infer U> ? U :
     T;
+
+type AllowType<Obj, Type> = {
+    [K in keyof Obj]: Obj[K] extends Type ? K : never
+};
+export type FieldsOfType<Obj, Type> = AllowType<Obj, Type>[keyof Obj]

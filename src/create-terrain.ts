@@ -6,6 +6,7 @@ import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer} from './
 import terrainVertextShaderSource from './shaders/terrain.vertex.glsl';
 import terrainFragmentShaderSource from './shaders/terrain.fragment.glsl';
 import {Program, BufferObject} from './types';
+import {State} from './store';
 
 interface Context {
     gl: WebGLRenderingContext,
@@ -41,31 +42,24 @@ export async function createTerrain(
 
 function createRender(context: Context) {
     return function render(opts: {
-        cameraPosition: Vec3,
-        center: Vec3,
+        state: State,
         aspect: number,
         clipDirection?: -1 | 1 | 0,
         terrainScale?: number[]
         clipLevel?: number,
         flip?: boolean,
-        directionalLightColor: Vec3,
-        directionalLightVector: Vec3
     }) {
         const {gl, terrain, program} = context;
         const {
-            cameraPosition,
-            center,
+            state,
             aspect,
             clipDirection = 0,
             clipLevel = 0,
             flip = false,
             terrainScale = [1, 1, 1],
-            directionalLightVector,
-            directionalLightColor
         } = opts;
         const {projection, model, view} = createMatrices({
-            cameraPosition,
-            center,
+            camera: state.camera,
             aspect,
             flip
         });
@@ -94,8 +88,8 @@ function createRender(context: Context) {
             view
         );
 
-        gl.uniform3fv(program.uniforms.directionalLightVector, directionalLightVector);
-        gl.uniform3fv(program.uniforms.directionalLightColor, directionalLightColor);
+        gl.uniform3fv(program.uniforms.directionalLightVector, state.light.direction);
+        gl.uniform3fv(program.uniforms.directionalLightColor, state.light.color);
         gl.uniform1f(program.uniforms.clipDirection, clipDirection);
         gl.uniform1f(program.uniforms.clipLevel, clipLevel);
 
