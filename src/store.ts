@@ -1,4 +1,4 @@
-import {vec3 as Vec3} from 'gl-matrix';
+import Vec3 = require('gl-matrix/vec3');
 import {inRange} from './utils';
 import {getSunPosition} from './create-sky';
 import {FieldsOfType} from './types';
