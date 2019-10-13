@@ -9,8 +9,8 @@ const INITIAL_STATE = {
         active: true
     },
     camera: {
-        center: Vec3.fromValues(106, -461, 93),
-        position: Vec3.fromValues(-341, 106, 169),
+        center: Vec3.fromValues(-596, -492, 111),
+        position: Vec3.fromValues(-201, 115, 168)
     },
     terrain: {
         visible: true
@@ -28,17 +28,20 @@ const INITIAL_STATE = {
         color: Vec3.fromValues(0, 0, 0),
     },
     sky: {
-        dayTime: 1 * 3600 * 1000,
+        dayTime: 9 * 3600 * 1000,
         visible: true,
         sunPosition: Vec3.fromValues(0, 0, 0),
-        autoSunMove: true
+        autoSunMove: false
     }
 }
 
 export type State = typeof INITIAL_STATE;
 
 
-export const getInitialState = () => INITIAL_STATE;
+export const getInitialState = () => {
+    setDayTime(INITIAL_STATE, INITIAL_STATE.sky.dayTime)
+    return INITIAL_STATE;
+}
 
 export const toggle = <
     K1 extends keyof State,

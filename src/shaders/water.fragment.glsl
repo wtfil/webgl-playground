@@ -13,7 +13,7 @@ uniform lowp vec3 directionalLightVector;
 uniform lowp vec3 directionalLightColor;
 
 const lowp float waterDistortionStrenth = 0.02;
-const lowp float fresnelStrength = 1.5;
+const lowp float fresnelStrength = 1.0;
 const lowp float waterReflectivity = 0.5;
 const lowp vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
 // const lowp vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
@@ -38,7 +38,8 @@ void main() {
     lowp vec3 normal = normalMapColor.xyz * 2.0 - 1.0;
     normal = normalize(normal);
     lowp float refractiveFactor = dot(toCamera, normal);
-    refractiveFactor = pow(refractiveFactor, fresnelStrength);
+    // TODO do we need this?
+    // refractiveFactor = pow(refractiveFactor, fresnelStrength);
 
     // puting all together
     refractTexCoords += totalDistortion;

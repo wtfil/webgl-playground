@@ -10,12 +10,18 @@ import {State} from './store';
 const {cos, sin, tan, PI} = Math;
 
 interface Context {
-    gl: WebGLRenderingContext,
-    program: Program,
-    sun: BufferObject
+    gl: WebGLRenderingContext;
+    program: Program;
+    sun: BufferObject;
+    size: number;
 }
 
-export function createSky(gl: WebGLRenderingContext) {
+export function createSky(
+    gl: WebGLRenderingContext,
+    opts: {
+        size: number
+    }
+) {
     const program = createProgram(
         gl,
         vertextShaderSource,
@@ -24,7 +30,7 @@ export function createSky(gl: WebGLRenderingContext) {
     const sun = bindArraysToBuffers(gl, {
         arrays: createArrays()
     });
-    const context = {gl, sun, program};
+    const context = {gl, sun, program, size: opts.size};
     return {
         render: createRender(context)
     }
@@ -36,8 +42,7 @@ function createRender(context: Context) {
         aspect: number,
         flip?: boolean
     }) {
-        const domeRadius = 1000;
-        const {gl, program, sun} = context;
+        const {gl, program, sun, size} = context;
         const {
             state,
             aspect,
@@ -46,22 +51,16 @@ function createRender(context: Context) {
         const {projection, model, view} = createMatrices({
             camera: state.camera,
             aspect,
-            flip,
-            far: domeRadius * 2
+            flip
         });
-        Mat4.translate(model, model, state.camera.position);
-        Mat4.translate(model, model, [0, 0, -170]);
-        Mat4.scale(model, model, [domeRadius, domeRadius, domeRadius]);
+        const [x, y] = state.camera.position
+        Mat4.translate(model, model, [x, y, -100]);
+        Mat4.scale(model, model, [size, size, size]);
 
         gl.useProgram(program.program);
 
         bindBuffer(gl, sun.buffers.position, program.attributes.position, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
-
-        gl.uniform1f(
-            program.uniforms.domeRadius,
-            domeRadius
-        );
 
         gl.uniform3fv(
             program.uniforms.sunPosition,
@@ -163,7 +162,7 @@ export function getSunPosition(n: number) {
     const sunPosition = Vec3.fromValues(x, -y, z);
     const directionalLightColor = Vec3.fromValues(1, 1, 1);
     const directionalLightVector = Vec3.create();
-    const lightAttenuation = inRange(z * 2, 0, 1) // use scattering algorithm for this
+    const lightAttenuation = inRange(z * 3, 0, 1) // use scattering algorithm for this
     Vec3.negate(directionalLightVector, sunPosition);
     Vec3.scale(directionalLightColor, directionalLightColor, lightAttenuation);
 

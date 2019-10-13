@@ -1,4 +1,3 @@
-uniform lowp float domeRadius;
 uniform lowp vec3 sunPosition;
 uniform lowp vec3 cameraPosition;
 

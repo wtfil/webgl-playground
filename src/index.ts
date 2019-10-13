@@ -20,7 +20,9 @@ window.addEventListener('load', setup);
 const SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
+const TERRAIN_SIZE = SIZE * 2;
 const WATER_SIZE = SIZE * 2;
+const SKY_DOME_SIZE = 1000;
 const DETAILS_LEVEL = 4;
 
 async function setup() {
@@ -34,17 +36,20 @@ async function setup() {
     }
 
     const terrain = await createTerrain(gl, {
-        heatmap: 'heightmaps/terrain4.png',
-        height: 500 / DETAILS_LEVEL,
+        heatmap: 'heightmaps/terrain5.png',
         chunkSize: 20 / DETAILS_LEVEL,
-        baseLevel: 50 / DETAILS_LEVEL,
+        // baseLevel: 50 / DETAILS_LEVEL,
+        baseLevel: 120,
+        size: [TERRAIN_SIZE, TERRAIN_SIZE, 200]
     });
 
     const water = await createWater(gl, {
         size: WATER_SIZE,
     })
 
-    const sky = createSky(gl);
+    const sky = createSky(gl, {
+        size: SKY_DOME_SIZE
+    });
 
     const state = getInitialState();
     const {emitter} = initControls(canvas);
@@ -59,7 +64,7 @@ async function setup() {
         .on('zoom', e => zoom(state, e.dy))
         .on('moveCamera', e => moveCamera(state, e))
         .on('rotateCamera', e => rorateCamera(state, e.dx / 500, e.dy))
-        .on('moveSun', e => moveSun(state, e.ds))
+        .on('moveSun', e => moveSun(state, e.sunTime * 1e5))
     
     function render() {
         if (!state.app.active) {
@@ -89,7 +94,6 @@ function drawScene(props: {
     sky: Unpacked<ReturnType<typeof createSky>>
 }) {
     const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
-    const terrainScale = [WATER_SIZE, WATER_SIZE, 100];
     const {
         gl,
         terrain,
@@ -99,7 +103,6 @@ function drawScene(props: {
     } = props;
     const opts = {
         state,
-        terrainScale,
         aspect
     };
 
@@ -110,20 +113,20 @@ function drawScene(props: {
 
     if (state.water.visible) {
         water.updateReflectionTexture(() => {
-            if (state.terrain.visible) {
-                terrain.render({
-                    ...opts,
-                    clipDirection: -1,
-                    flip: true
-                })
-            }
             if (state.sky.visible) {
                 sky.render({
                     ...opts,
                     flip: true
                 });
             } else {
-                 gl.clearColor(0.53, 0.8, 0.98, 1.); 
+                gl.clearColor(0.53, 0.8, 0.98, 1.); 
+            }
+            if (state.terrain.visible) {
+                terrain.render({
+                    ...opts,
+                    clipDirection: -1,
+                    flip: true
+                })
             }
         })
         water.updateRefractionTexture(() => {
@@ -138,11 +141,11 @@ function drawScene(props: {
 
     gl.viewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (state.terrain.visible) {
-        terrain.render(opts)
-    }
     if (state.water.visible) {
         water.render(opts);
+    }
+    if (state.terrain.visible) {
+        terrain.render(opts)
     }
     if (state.sky.visible) {
         sky.render(opts);

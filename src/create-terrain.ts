@@ -9,21 +9,22 @@ import {Program, BufferObject} from './types';
 import {State} from './store';
 
 interface Context {
-    gl: WebGLRenderingContext,
-    program: Program,
-    terrain: BufferObject
+    gl: WebGLRenderingContext;
+    program: Program;
+    terrain: BufferObject;
+    size: number[];
 }
 
 export async function createTerrain(
     gl: WebGLRenderingContext,
     opts: {
         heatmap: string,
-        height: number,
         chunkSize: number,
         baseLevel?: number,
+        size: number[]
     }
 ) {
-    const arrays = await createArrays(opts.heatmap, opts.height, opts.chunkSize, opts.baseLevel);
+    const arrays = await createArrays(opts.heatmap, opts.chunkSize, opts.baseLevel);
     const program = createProgram(
         gl,
         terrainVertextShaderSource,
@@ -33,7 +34,7 @@ export async function createTerrain(
         arrays
     });
 
-    const context = {terrain, gl, program};
+    const context = {terrain, gl, program, size: opts.size};
 
     return {
         render: createRender(context)
@@ -49,14 +50,13 @@ function createRender(context: Context) {
         clipLevel?: number,
         flip?: boolean,
     }) {
-        const {gl, terrain, program} = context;
+        const {gl, terrain, program, size} = context;
         const {
             state,
             aspect,
             clipDirection = 0,
             clipLevel = 0,
-            flip = false,
-            terrainScale = [1, 1, 1],
+            flip = false
         } = opts;
         const {projection, model, view} = createMatrices({
             camera: state.camera,
@@ -64,7 +64,7 @@ function createRender(context: Context) {
             flip
         });
 
-        Mat4.scale(model, model, terrainScale);
+        Mat4.scale(model, model, size);
 
         gl.useProgram(program.program);
         bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);
@@ -100,7 +100,7 @@ function createRender(context: Context) {
     }
 }
 
-async function createArrays(src: string, maxHeight: number, size: number, baseLevel: number = 0) {
+async function createArrays(src: string, size: number, baseLevel: number = 0) {
     const canvas = document.createElement('canvas');
     const image = await loadImage(src);
     canvas.width = image.width;
@@ -112,7 +112,6 @@ async function createArrays(src: string, maxHeight: number, size: number, baseLe
     ctx.drawImage(image, 0, 0);
     const {data} = ctx.getImageData(0, 0, image.width, image.height);
     const u32 = new Uint32Array(data)
-    const levelHeight = 256 / maxHeight;
 
     const width = Math.floor(image.width / size);
     const height = Math.floor(image.height / size);
@@ -127,7 +126,7 @@ async function createArrays(src: string, maxHeight: number, size: number, baseLe
                     s += u32[(i * size * image.width + j * size + k * size + l) * 4]
                 }
             }
-            const v = s / size / size / levelHeight;
+            const v = s / size / size;
             heatmap[i * width + j] = v;
             if (max < v) {
                 max = v;
