@@ -50,7 +50,6 @@ async function setup() {
     const {emitter} = initControls(canvas);
 
     emitter
-        .on('visability', e => state.app.active = e.visability)
         .on('toggleRenderWater', () => toggle(state, 'water', 'visible'))
         .on('toggleRenderTerrain', () => toggle(state, 'terrain', 'visible'))
         .on('toggleRefraction', () => toggle(state, 'water', 'useRefraction'))

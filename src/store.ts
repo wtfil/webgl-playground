@@ -4,6 +4,7 @@ import {getSunPosition} from './create-sky';
 import {FieldsOfType} from './types';
 
 const INITIAL_STATE = {
+    // currently no used
     app: {
         active: true
     },

@@ -99,14 +99,6 @@ export function initControls(elem: HTMLElement) {
         e.preventDefault();
     }
 
-    const onFocus = () => {
-        ee.emit('visability', {visible: true});
-    }
-    const onBlur = () => {
-        pressed.clear();
-        ee.emit('visability', {visible: false});
-    }
-
     const tearDown = () => {
         ee.removeAllListeners();
         elem.removeEventListener('wheel', onWheel);
@@ -116,8 +108,6 @@ export function initControls(elem: HTMLElement) {
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('keypress', onKeyPress);
         window.removeEventListener('keyup', onKeyup);
-        window.removeEventListener('focus', onFocus)
-        window.removeEventListener('blur', onBlur)
     }
 
     pullKeys();
@@ -129,8 +119,6 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('keypress', onKeyPress);
     window.addEventListener('keyup', onKeyup);
-    window.addEventListener('focus', onFocus)
-    window.addEventListener('blur', onBlur)
 
     return {
         emitter: ee,
