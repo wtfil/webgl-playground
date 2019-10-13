@@ -1,7 +1,7 @@
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
-import {createSun} from './create-sun';
+import {createSky} from './create-sky';
 import {Unpacked} from './types';
 import {
     getInitialState,
@@ -44,7 +44,7 @@ async function setup() {
         size: WATER_SIZE,
     })
 
-    const sun = createSun(gl);
+    const sky = createSky(gl);
 
     const state = getInitialState();
     const {emitter} = initControls(canvas);
@@ -73,7 +73,7 @@ async function setup() {
             state,
             terrain,
             water,
-            sun
+            sky
         });
         requestAnimationFrame(render);
     }
@@ -87,7 +87,7 @@ function drawScene(props: {
     state: State,
     terrain: Unpacked<ReturnType<typeof createTerrain>>,
     water: Unpacked<ReturnType<typeof createWater>>,
-    sun: Unpacked<ReturnType<typeof createSun>>
+    sky: Unpacked<ReturnType<typeof createSky>>
 }) {
     const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
     const terrainScale = [WATER_SIZE, WATER_SIZE, 100];
@@ -95,7 +95,7 @@ function drawScene(props: {
         gl,
         terrain,
         water,
-        sun,
+        sky,
         state
     } = props;
     const opts = {
@@ -119,7 +119,7 @@ function drawScene(props: {
                 })
             }
             if (state.sky.visible) {
-                sun.render({
+                sky.render({
                     ...opts,
                     flip: true
                 });
@@ -146,6 +146,6 @@ function drawScene(props: {
         water.render(opts);
     }
     if (state.sky.visible) {
-        sun.render(opts);
+        sky.render(opts);
     }
 }

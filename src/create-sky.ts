@@ -2,8 +2,8 @@ import Vec3 = require('gl-matrix/vec3');
 import Mat4 = require('gl-matrix/mat4');
 import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer, inRange} from './utils';
 
-import sunVertextShaderSource from './shaders/sun.vertex.glsl';
-import sunFragmentShaderSource from './shaders/sun.fragment.glsl';
+import vertextShaderSource from './shaders/sky.vertex.glsl';
+import fragmentShaderSource from './shaders/sky.fragment.glsl';
 import {Program, BufferObject} from './types';
 import {State} from './store';
 
@@ -15,11 +15,11 @@ interface Context {
     sun: BufferObject
 }
 
-export function createSun(gl: WebGLRenderingContext) {
+export function createSky(gl: WebGLRenderingContext) {
     const program = createProgram(
         gl,
-        sunVertextShaderSource,
-        sunFragmentShaderSource
+        vertextShaderSource,
+        fragmentShaderSource
     )
     const sun = bindArraysToBuffers(gl, {
         arrays: createArrays()

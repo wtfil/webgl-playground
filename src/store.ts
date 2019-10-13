@@ -1,6 +1,6 @@
 import {vec3 as Vec3} from 'gl-matrix';
 import {inRange} from './utils';
-import {getSunPosition} from './create-sun';
+import {getSunPosition} from './create-sky';
 import {FieldsOfType} from './types';
 
 const INITIAL_STATE = {
