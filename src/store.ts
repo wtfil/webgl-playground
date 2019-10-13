@@ -60,7 +60,14 @@ export const zoom = (state: State, dz: number) => {
     Vec3.add(position, center, eye);
 }
 
-export const moveCameraHorizontaly = (state: State, left: number, forward: number) => {
+export const moveCamera = (
+    state: State,
+    e: {
+        left: number,
+        forward: number,
+        up: number
+    }
+) => {
     const {position, center} = state.camera;
     const forwardMove = Vec3.create();
     const leftMove = Vec3.create();
@@ -69,30 +76,24 @@ export const moveCameraHorizontaly = (state: State, left: number, forward: numbe
     Vec3.rotateZ(leftMove, forwardMove, [0, 0, 1], Math.PI / 2);
     leftMove[2] = 0;
 
-    if (forward === 1) {
+    if (e.forward === 1) {
         Vec3.add(move, move, forwardMove);
     }
-    if (forward === -1) {
+    if (e.forward === -1) {
         Vec3.sub(move, move, forwardMove);
     }
-    if (left === 1) {
+    if (e.left === 1) {
         Vec3.add(move, move, leftMove);
     }
-    if (left === -1) {
+    if (e.left === -1) {
         Vec3.sub(move, move, leftMove);
     }
 
     Vec3.normalize(move, move);
+    Vec3.add(move, move, [0, 0, e.up]);
     Vec3.scale(move, move, 6);
     Vec3.add(position, position, move)
     Vec3.add(center, center, move);
-}
-
-export const moveCameraVertically = (state: State, dy: number) => {
-    const {position, center} = state.camera;
-    const add = [0, 0, dy];
-    Vec3.add(position, position, add);
-    Vec3.add(center, center, add);
 }
 
 export const rorateCamera = (state: State, dx: number, dy: number) => {

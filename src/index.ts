@@ -1,11 +1,19 @@
-import Vec3 = require('gl-matrix/vec3');
-
 import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSun} from './create-sun';
 import {Unpacked} from './types';
-import {getInitialState, toggle, zoom, moveCameraHorizontaly, moveCameraVertically, rorateCamera, moveSun, autoMoveSun, updateWaterTime, State} from './store';
+import {
+    getInitialState,
+    toggle,
+    zoom,
+    rorateCamera,
+    moveSun,
+    autoMoveSun,
+    updateWaterTime,
+    State,
+    moveCamera
+} from './store';
 
 window.addEventListener('load', setup);
 
@@ -39,7 +47,7 @@ async function setup() {
     const sun = createSun(gl);
 
     const state = getInitialState();
-    const emitter = initControls(canvas);
+    const {emitter} = initControls(canvas);
 
     emitter
         .on('visability', e => state.app.active = e.visability)
@@ -50,8 +58,7 @@ async function setup() {
         .on('toggleRenderSun', () => toggle(state, 'sky', 'visible'))
         .on('toggleAutoSunMove', () => toggle(state, 'sky', 'autoSunMove'))
         .on('zoom', e => zoom(state, e.dy))
-        .on('moveCamera', e => moveCameraHorizontaly(state, e.left, e.forward))
-        .on('moveVertically', e => moveCameraVertically(state, e.dy * 3))
+        .on('moveCamera', e => moveCamera(state, e))
         .on('rotateCamera', e => rorateCamera(state, e.dx / 500, e.dy))
         .on('moveSun', e => moveSun(state, e.ds))
     
