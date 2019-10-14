@@ -1,46 +1,49 @@
-uniform lowp vec3 sunPosition;
-uniform lowp vec3 cameraPosition;
+precision highp float;
 
-const lowp float PI = 3.1415926535897932384626433832795;
-const lowp float PI_2 = 1.57079632679489661923;
-const lowp float si = 22.0; // sun intencity
+uniform vec3 sunPosition;
+uniform vec3 cameraPosition;
 
-const lowp float earthRadius = 6371e3;
-const lowp float atmosphereRadius = 6471e3;
-const lowp float rsh = 8.0e3; // Rayleigh scale height
-const lowp float msh = 1.2e3; // Mie scale height
+const float PI = 3.1415926535897932384626433832795;
+const float PI_2 = 1.57079632679489661923;
+const float si = 22.0; // sun intencity
 
-const lowp vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficient
-const lowp float msc = 21e-6; // Mie scattering coefficient
+const float earthRadius = 6371e3;
+const float atmosphereRadius = 6471e3;
+const float rsh = 8.0e3; // Rayleigh scale height
+const float msh = 1.2e3; // Mie scale height
 
-const lowp float gr = 0.0; // Rayleigh simetry constant
-const lowp float gm = 0.758; // Mie simetry constant
+const vec3 rsc = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficient
+const float msc = 21e-6; // Mie scattering coefficient
 
-varying lowp vec4 worldPosition;
-varying lowp vec4 sunView;
+const float gr = 0.0; // Rayleigh simetry constant
+const float gm = 0.758; // Mie simetry constant
+
+varying vec4 worldPosition;
+varying vec4 sunView;
+
 
 const int samples = 5;
 
 // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
-lowp float phase(
-    lowp float g,
-    lowp float a
+float phase(
+    float g,
+    float a
 ) {
-    lowp float g2 = g * g;
+    float g2 = g * g;
     return 3.0 * (1.0 - g2)  * (1.0 + a * a) / 8.0 / PI / (2.0 + g2) / pow(1.0 + g2 - 2.0 * g * a, 1.5);
 }
 
-lowp vec3 translate(lowp vec3 dir) {
-    lowp float r1 = earthRadius;
-    lowp float r2 = atmosphereRadius;
+vec3 translate(vec3 dir) {
+    float r1 = earthRadius;
+    float r2 = atmosphereRadius;
 
-    lowp float al0 = asin(dir.z);
-    lowp float az0 = atan(dir.y / dir.x);
+    float al0 = asin(dir.z);
+    float az0 = atan(dir.y / dir.x);
     if (dir.x < 0.0) {
         az0 += PI;
     }
-    lowp float al1 = asin(r1 / r2);
-    lowp float al2 = al1 + (1.0 - al1 / PI_2) * al0;
+    float al1 = asin(r1 / r2);
+    float al2 = al1 + (1.0 - al1 / PI_2) * al0;
     return vec3(
         cos(al2) * cos(az0),
         cos(al2) * sin(az0),
@@ -49,22 +52,22 @@ lowp vec3 translate(lowp vec3 dir) {
 }
 
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
-lowp float dtse(
-    lowp vec3 origin,
-    lowp vec3 direction,
-    lowp float radius
+float dtse(
+    vec3 origin,
+    vec3 direction,
+    float radius
 ) {
-    lowp vec3 center = vec3(0.0); // could be used as parameter
-    lowp vec3 oc = origin - center;
-    lowp float a = dot(direction, direction);
-    lowp float b = 2.0 * dot(direction, oc);
-    lowp float c = dot(oc, oc) - radius * radius;
-    lowp float d = b * b - 4.0 * a * c;
+    vec3 center = vec3(0.0); // could be used as parameter
+    vec3 oc = origin - center;
+    float a = dot(direction, direction);
+    float b = 2.0 * dot(direction, oc);
+    float c = dot(oc, oc) - radius * radius;
+    float d = b * b - 4.0 * a * c;
     if (d < 0.0) {
         return -1.0;
     }
-    lowp float qd = sqrt(d);
-    lowp float t = (-qd - b) / 2.0 / a;
+    float qd = sqrt(d);
+    float t = (-qd - b) / 2.0 / a;
     if (t >= 0.0) {
         return t;
     }
@@ -75,11 +78,11 @@ lowp float dtse(
     return -1.0;
 }
 
-lowp vec3 getSunColor(
-    lowp vec3 sun,
-    lowp vec3 position
+vec3 getSunColor(
+    vec3 sun,
+    vec3 position
 ) {
-    lowp float angle = acos(dot(
+    float angle = acos(dot(
         sun,
         position
     ));
@@ -87,24 +90,24 @@ lowp vec3 getSunColor(
 }
 
 void main() {
-    lowp vec3 camera = vec3(0.0, 0.0, earthRadius);
-    lowp vec3 world = normalize(worldPosition.xyz);
-    lowp vec3 position = translate(world) * atmosphereRadius;
-    lowp vec3 ray = normalize(position - camera);
-    lowp vec3 sun = normalize(sunPosition);
+    vec3 camera = vec3(0.0, 0.0, earthRadius);
+    vec3 world = normalize(worldPosition.xyz);
+    vec3 position = translate(world) * atmosphereRadius;
+    vec3 ray = normalize(position - camera);
+    vec3 sun = normalize(sunPosition);
 
-    lowp float far = dtse(camera, ray, atmosphereRadius);
+    float far = dtse(camera, ray, atmosphereRadius);
 
-    lowp float lightAngle = dot(ray, sun);
-    lowp float rshFactor = phase(gr, lightAngle);
-    lowp float mieFactor = phase(gm, lightAngle);
+    float lightAngle = dot(ray, sun);
+    float rshFactor = phase(gr, lightAngle);
+    float mieFactor = phase(gm, lightAngle);
 
-    lowp float sampleSize = far / float(samples);
-    lowp vec3 samplePoint = camera + ray * sampleSize * 0.5;
-    lowp float rshOpticalDepth = 0.0;
-    lowp float mieOpticalDepth = 0.0;
-    lowp vec3 rshAccumulated = vec3(0.0);
-    lowp vec3 mieAccumulated = vec3(0.0);
+    float sampleSize = far / float(samples);
+    vec3 samplePoint = camera + ray * sampleSize * 0.5;
+    float rshOpticalDepth = 0.0;
+    float mieOpticalDepth = 0.0;
+    vec3 rshAccumulated = vec3(0.0);
+    vec3 mieAccumulated = vec3(0.0);
 
     for (int i = 0; i < samples; i ++) {
         lowp float far2 = dtse(
