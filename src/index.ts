@@ -2,6 +2,7 @@ import {createTerrain} from './create-terrain';
 import {initControls} from './init-contol';
 import {createWater} from './create-water';
 import {createSky} from './create-sky';
+import {createLight} from './create-light';
 import {Unpacked} from './types';
 import {
     getInitialState,
@@ -38,7 +39,6 @@ async function setup() {
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/terrain5.png',
         chunkSize: 20 / DETAILS_LEVEL,
-        // baseLevel: 50 / DETAILS_LEVEL,
         baseLevel: 120,
         size: [TERRAIN_SIZE, TERRAIN_SIZE, 200]
     });
@@ -50,6 +50,8 @@ async function setup() {
     const sky = createSky(gl, {
         size: SKY_DOME_SIZE
     });
+
+    const light = createLight(gl)
 
     const state = getInitialState();
     const {emitter} = initControls(canvas);
@@ -64,7 +66,7 @@ async function setup() {
         .on('zoom', e => zoom(state, e.dy))
         .on('moveCamera', e => moveCamera(state, e))
         .on('rotateCamera', e => rorateCamera(state, e.dx / 500, e.dy))
-        .on('moveSun', e => moveSun(state, e.sunTime * 1e5))
+        .on('moveSun', e => moveSun(state, e.sunTime * 3e5))
     
     function render() {
         if (!state.app.active) {

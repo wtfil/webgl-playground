@@ -54,7 +54,7 @@ function createRender(context: Context) {
             flip
         });
         const [x, y] = state.camera.position
-        Mat4.translate(model, model, [x, y, -100]);
+        Mat4.translate(model, model, [x, y, 0]);
         Mat4.scale(model, model, [size, size, size]);
 
         gl.useProgram(program.program);

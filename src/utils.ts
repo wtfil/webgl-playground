@@ -174,12 +174,12 @@ export function bindArraysToBuffers(
 
 
 export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
-    const texture = gl.createTexture() as WebGLTexture;
+    const colorTexture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
     const renderbuffer = gl.createRenderbuffer() as WebGLRenderbuffer;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, colorTexture);
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.RGBA,
         width, height, 0,
@@ -203,7 +203,7 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        texture,
+        colorTexture,
         0
     );
     gl.framebufferRenderbuffer(
@@ -214,7 +214,10 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
     );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return [texture, framebuffer];
+    return [
+        colorTexture,
+        framebuffer
+    ];
 }
 
 
