@@ -7,26 +7,30 @@ import {
     getInitialState,
     toggle,
     zoom,
-    rorateCamera,
+    rotateCamera,
     moveSun,
     autoMoveSun,
     updateWaterTime,
     State,
-    moveCamera
+    moveCamera,
+    autoPilot
 } from './store';
 
 window.addEventListener('load', setup);
 
-const SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
+const CANVAS_ELEM_SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
+const SIZE = 512;
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const TERRAIN_SIZE = SIZE * 2;
 const WATER_SIZE = SIZE * 2;
-const SKY_DOME_SIZE = 1000;
+const SKY_DOME_SIZE = SIZE;
 const DETAILS_LEVEL = 4;
 
 async function setup() {
     const canvas = document.querySelector('canvas')!;
+    canvas.style.width = CANVAS_ELEM_SIZE + 'px';
+    canvas.style.height = CANVAS_ELEM_SIZE + 'px';
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     const gl = canvas.getContext('experimental-webgl') as WebGLRenderingContext;
@@ -38,7 +42,6 @@ async function setup() {
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/terrain5.png',
         chunkSize: 20 / DETAILS_LEVEL,
-        // baseLevel: 50 / DETAILS_LEVEL,
         baseLevel: 120,
         size: [TERRAIN_SIZE, TERRAIN_SIZE, 200]
     });
@@ -61,17 +64,19 @@ async function setup() {
         .on('toggleReflection', () => toggle(state, 'water', 'useReflection'))
         .on('toggleRenderSun', () => toggle(state, 'sky', 'visible'))
         .on('toggleAutoSunMove', () => toggle(state, 'sky', 'autoSunMove'))
+        .on('toggleAutoPilot', () => toggle(state, 'app', 'autoPilot'))
         .on('zoom', e => zoom(state, e.dy))
         .on('moveCamera', e => moveCamera(state, e))
-        .on('rotateCamera', e => rorateCamera(state, e.dx / 500, e.dy))
+        .on('rotateCamera', e => rotateCamera(state, e.dx / 500, e.dy))
         .on('moveSun', e => moveSun(state, e.sunTime * 1e5))
     
     function render() {
         if (!state.app.active) {
             return requestAnimationFrame(render);
         }
-        updateWaterTime(state)
-        autoMoveSun(state, 3e5);
+        updateWaterTime(state);
+        autoMoveSun(state, 1e5);
+        autoPilot(state);
         drawScene({
             gl: gl!,
             state,

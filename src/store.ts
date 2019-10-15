@@ -4,13 +4,14 @@ import {getSunPosition} from './create-sky';
 import {FieldsOfType} from './types';
 
 const INITIAL_STATE = {
-    // currently no used
     app: {
-        active: true
+        // currently no used
+        active: true,
+        autoPilot: true
     },
     camera: {
-        center: Vec3.fromValues(-596, -492, 111),
-        position: Vec3.fromValues(-201, 115, 168)
+        center: Vec3.fromValues(0, 100, 140),
+        position: Vec3.fromValues(0, 0, 160)
     },
     terrain: {
         visible: true
@@ -20,7 +21,7 @@ const INITIAL_STATE = {
         time: 0,
         visible: true,
         useReflection: true,
-        useRefraction: true
+        useRefraction: false
     },
     light: {
         // directional light
@@ -80,16 +81,16 @@ export const moveCamera = (
     Vec3.rotateZ(leftMove, forwardMove, [0, 0, 1], Math.PI / 2);
     leftMove[2] = 0;
 
-    if (e.forward === 1) {
+    if (e.forward > 0) {
         Vec3.add(move, move, forwardMove);
     }
-    if (e.forward === -1) {
+    if (e.forward < 0) {
         Vec3.sub(move, move, forwardMove);
     }
-    if (e.left === 1) {
+    if (e.left > 0) {
         Vec3.add(move, move, leftMove);
     }
-    if (e.left === -1) {
+    if (e.left < 0) {
         Vec3.sub(move, move, leftMove);
     }
 
@@ -100,7 +101,7 @@ export const moveCamera = (
     Vec3.add(center, center, move);
 }
 
-export const rorateCamera = (state: State, dx: number, dy: number) => {
+export const rotateCamera = (state: State, dx: number, dy: number) => {
     const {position, center} = state.camera;
     const eye = Vec3.create();
     Vec3.sub(eye, center, position);
@@ -129,6 +130,13 @@ export const autoMoveSun = (state: State, spead: number) => {
 }
 export const updateWaterTime = (state: State) => {
     state.water.time = Date.now() - state.water.start;
+}
+
+export const autoPilot = (state: State) => {
+    if (!state.app.autoPilot) {
+        return;
+    }
+    rotateCamera(state, 0.005, 0);
 }
 
 const setDayTime = (state: State, time: number) => {

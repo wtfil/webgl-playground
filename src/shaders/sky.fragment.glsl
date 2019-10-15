@@ -21,8 +21,8 @@ const float gm = 0.758; // Mie simetry constant
 varying vec4 worldPosition;
 varying vec4 sunView;
 
-
-const int samples = 5;
+const int primaryRaySamples = 3;
+const int secondaryRaySamples = 2;
 
 // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html
 float phase(
@@ -102,25 +102,25 @@ void main() {
     float rshFactor = phase(gr, lightAngle);
     float mieFactor = phase(gm, lightAngle);
 
-    float sampleSize = far / float(samples);
+    float sampleSize = far / float(primaryRaySamples);
     vec3 samplePoint = camera + ray * sampleSize * 0.5;
     float rshOpticalDepth = 0.0;
     float mieOpticalDepth = 0.0;
     vec3 rshAccumulated = vec3(0.0);
     vec3 mieAccumulated = vec3(0.0);
 
-    for (int i = 0; i < samples; i ++) {
+    for (int i = 0; i < primaryRaySamples; i ++) {
         lowp float far2 = dtse(
             samplePoint,
             sun,
             atmosphereRadius
         );
-        lowp float sampleSize2 = far2 / float(samples);
+        lowp float sampleSize2 = far2 / float(secondaryRaySamples);
         lowp vec3 samplePoint2 = samplePoint + sampleSize2 / 2.0 * sun;
         lowp float rshOpticalDepth2 = 0.0;
         lowp float mieOpticalDepth2 = 0.0;
 
-        for (int j = 0; j < samples; j ++) {
+        for (int j = 0; j < secondaryRaySamples; j ++) {
             lowp float height = length(samplePoint2) - earthRadius;
             lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize2;
             lowp float mieOpticalDepthStep = exp(-height / msh) * sampleSize2;

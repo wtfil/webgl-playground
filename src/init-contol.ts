@@ -63,6 +63,9 @@ export function initControls(elem: HTMLElement) {
             case '6':
                 ee.emit('toggleAutoSunMove');
                 break;
+            case '7':
+                ee.emit('toggleAutoPilot');
+                break;
             default:
                 pressed.add(e.key);
         }
