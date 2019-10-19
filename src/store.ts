@@ -21,7 +21,7 @@ const INITIAL_STATE = {
         time: 0,
         visible: true,
         useReflection: true,
-        useRefraction: false
+        useRefraction: true
     },
     light: {
         // directional light
@@ -136,7 +136,7 @@ export const autoPilot = (state: State) => {
     if (!state.app.autoPilot) {
         return;
     }
-    rotateCamera(state, 0.005, 0);
+    rotateCamera(state, 0.003, 0);
 }
 
 const setDayTime = (state: State, time: number) => {

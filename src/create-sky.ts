@@ -51,7 +51,7 @@ function createRender(context: Context) {
         const {projection, model, view} = createMatrices({
             camera: state.camera,
             aspect,
-            flip
+            flip,
         });
         const [x, y] = state.camera.position
         Mat4.translate(model, model, [x, y, 0]);
