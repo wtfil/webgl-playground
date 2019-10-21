@@ -149,7 +149,7 @@ export function bindBuffer(gl: WebGLRenderingContext, buffer: WebGLBuffer, attri
 export function bindArraysToBuffers(
     gl: WebGLRenderingContext,
     opts: {
-        arrays: {
+        arrays?: {
             [key: string]: number[]
         },
         textures?: BufferObject['textures'],
@@ -158,16 +158,16 @@ export function bindArraysToBuffers(
 ): BufferObject {
     const {arrays, textures = {}, framebuffers = {}} = opts;
     return {
-        buffers: {
+        buffers: arrays ? {
             position: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.position)),
             colors: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.colors)),
             indices: createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(arrays.indices)),
             normal: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.normals)),
             texture: createBuffer(gl, gl.ARRAY_BUFFER, new Float32Array(arrays.texture))
-        },
+        } : {},
         textures,
         framebuffers,
-        size: arrays.indices.length
+        size: arrays ? arrays.indices.length : 0
     }
 }
 

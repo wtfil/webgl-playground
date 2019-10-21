@@ -36,11 +36,16 @@ async function setup() {
         return;
     }
 
+    const light = createLight(gl, {
+        size: TERRAIN_SIZE
+    })
+
     const terrain = await createTerrain(gl, {
         heatmap: 'heightmaps/terrain5.png',
         chunkSize: 20 / DETAILS_LEVEL,
         baseLevel: 120,
-        size: [TERRAIN_SIZE, TERRAIN_SIZE, 200]
+        size: [TERRAIN_SIZE, TERRAIN_SIZE, 200],
+        shadowDepthTexture: light.depthTexture
     });
 
     const water = await createWater(gl, {
@@ -50,8 +55,6 @@ async function setup() {
     const sky = createSky(gl, {
         size: SKY_DOME_SIZE
     });
-
-    const light = createLight(gl)
 
     const state = getInitialState();
     const {emitter} = initControls(canvas);
@@ -77,6 +80,7 @@ async function setup() {
         drawScene({
             gl: gl!,
             state,
+            light,
             terrain,
             water,
             sky
@@ -91,6 +95,7 @@ async function setup() {
 function drawScene(props: {
     gl: WebGLRenderingContext,
     state: State,
+    light: Unpacked<ReturnType<typeof createLight>>,
     terrain: Unpacked<ReturnType<typeof createTerrain>>,
     water: Unpacked<ReturnType<typeof createWater>>,
     sky: Unpacked<ReturnType<typeof createSky>>
@@ -101,6 +106,7 @@ function drawScene(props: {
         terrain,
         water,
         sky,
+        light,
         state
     } = props;
     const opts = {
@@ -112,6 +118,10 @@ function drawScene(props: {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    light.updateDepthTexture(() => {
+        terrain.render(opts)
+    });
 
     if (state.water.visible) {
         water.updateReflectionTexture(() => {

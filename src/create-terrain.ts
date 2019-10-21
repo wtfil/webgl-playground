@@ -21,7 +21,8 @@ export async function createTerrain(
         heatmap: string,
         chunkSize: number,
         baseLevel?: number,
-        size: number[]
+        size: number[],
+        shadowDepthTexture: WebGLTexture
     }
 ) {
     const arrays = await createArrays(opts.heatmap, opts.chunkSize, opts.baseLevel);
@@ -31,7 +32,10 @@ export async function createTerrain(
         terrainFragmentShaderSource
     );
     const terrain = bindArraysToBuffers(gl, {
-        arrays
+        arrays,
+        textures: {
+            shadowDepth: opts.shadowDepthTexture
+        }
     });
 
     const context = {terrain, gl, program, size: opts.size};
@@ -42,6 +46,13 @@ export async function createTerrain(
 }
 
 function createRender(context: Context) {
+    const {program, gl, terrain} = context;
+
+    gl.useProgram(program.program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, terrain.textures.shadowDepth);
+    gl.uniform1i(program.uniforms.shadowDepthTexture, 0);
+
     return function render(opts: {
         state: State,
         aspect: number,
@@ -70,6 +81,7 @@ function createRender(context: Context) {
         bindBuffer(gl, terrain.buffers.position, program.attributes.position, 3);
         bindBuffer(gl, terrain.buffers.normal, program.attributes.normal, 3);
         bindBuffer(gl, terrain.buffers.colors, program.attributes.colors, 4);
+        bindBuffer(gl, terrain.buffers.texture, program.attributes.textureCoord, 2);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, terrain.buffers.indices);
 
         gl.uniformMatrix4fv(
@@ -138,7 +150,12 @@ async function createArrays(src: string, size: number, baseLevel: number = 0) {
     const indices = [];
     const colors = [];
     const normals = [];
-    const texture = [];
+    const texture = [
+        0, 0,
+        1, 0,
+        0, 1,
+        1, 1,
+    ];
 
     for (let i = 0; i < height; i ++) {
         for (let j = 0; j < width; j++) {
@@ -165,7 +182,7 @@ async function createArrays(src: string, size: number, baseLevel: number = 0) {
                     k + width + 1,
                 );
             }
-            texture.push(j / width, i / height);
+            // texture.push(j / width, i / height);
             
         }
     }

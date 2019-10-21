@@ -1,10 +1,9 @@
 import Mat4 = require('gl-matrix/mat4');
-import Vec3 = require('gl-matrix/vec3');
 import {createProgram, loadTexture, createFramebufferAndTexture, bindArraysToBuffers, createMatrices, bindBuffer} from './utils';
 import {Program, BufferObject} from './types';
 
-import waterVertextShaderSource from './shaders/water.vertex.glsl';
-import waterFragmentShaderSource from './shaders/water.fragment.glsl';
+import vertextShaderSource from './shaders/water.vertex.glsl';
+import fragmentShaderSource from './shaders/water.fragment.glsl';
 import {State} from './store';
 
 interface Context {
@@ -33,8 +32,8 @@ export async function createWater(
     ] = createFramebufferAndTexture(gl, size, size);
     const program = createProgram(
         gl,
-        waterVertextShaderSource,
-        waterFragmentShaderSource
+        vertextShaderSource,
+        fragmentShaderSource
     );
     const arrays = createArrays();
     const water = bindArraysToBuffers(gl, {

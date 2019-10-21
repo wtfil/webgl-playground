@@ -3,6 +3,7 @@ precision lowp float;
 attribute vec4 position;
 attribute vec3 normal;
 attribute vec4 colors;
+attribute vec2 textureCoord;
 
 uniform mat4 view;
 uniform mat4 model;
@@ -26,6 +27,7 @@ void main() {
 
   gl_Position = projection * view * model * position;
 
+  vTextureCoord = textureCoord;
   fragmentColor = colors;
   if (clipDirection == 1.0) {
     shouldClip = position.z > clipLevel ? 1.0 : 0.0;
