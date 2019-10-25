@@ -1,5 +1,7 @@
 precision highp float;
 
+uniform sampler2D cacheTexture;
+uniform int useCache;
 uniform vec3 sunPosition;
 uniform vec3 cameraPosition;
 

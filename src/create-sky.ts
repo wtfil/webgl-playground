@@ -1,6 +1,6 @@
 import Vec3 = require('gl-matrix/vec3');
 import Mat4 = require('gl-matrix/mat4');
-import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer, inRange} from './utils';
+import {createProgram, bindArraysToBuffers, createMatrices, bindBuffer, inRange, createFramebufferAndTexture} from './utils';
 
 import vertextShaderSource from './shaders/sky.vertex.glsl';
 import fragmentShaderSource from './shaders/sky.fragment.glsl';
@@ -15,6 +15,11 @@ interface Context {
     sun: BufferObject;
     size: number;
 }
+interface RenderProps {
+    state: State;
+    aspect: number;
+    flip?: boolean;
+}
 
 export function createSky(
     gl: WebGLRenderingContext,
@@ -22,32 +27,66 @@ export function createSky(
         size: number
     }
 ) {
+    const {size} = opts;
     const program = createProgram(
         gl,
         vertextShaderSource,
         fragmentShaderSource
     )
+    const [t, f] = createFramebufferAndTexture(gl, size, size);
     const sun = bindArraysToBuffers(gl, {
-        arrays: createArrays()
+        arrays: createArrays(),
+        textures: {cache: t},
+        framebuffers: {cache: f}
     });
-    const context = {gl, sun, program, size: opts.size};
+    const context = {gl, sun, program, size};
+    const render = createRender(context);
+    const renderToTexture = createRenderToTexture(context, render);
     return {
-        render: createRender(context)
+        render: renderToTexture
+    }
+}
+
+function propsSnapshot(props: RenderProps) {
+    return JSON.stringify(props.state.camera)
+}
+
+function createRenderToTexture(
+    context: Context,
+    render: ReturnType<typeof createRender>
+) {
+    const {gl, sun, size} = context;
+
+    let prev: string;
+    return function renderToTexture(props: RenderProps) {
+        const next = propsSnapshot(props);
+        if (next !== prev) {
+            prev = next;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, sun.framebuffers.cache);
+            gl.viewport(0, 0, size, size);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            render(props, false)
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        } else {
+            render(props, true)
+        }
     }
 }
 
 function createRender(context: Context) {
-    return function render(opts: {
-        state: State,
-        aspect: number,
-        flip?: boolean
-    }) {
+    const {gl, sun, program} = context;
+    gl.useProgram(program.program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sun.textures.cache);
+    gl.uniform1i(program.uniforms.cacheTexture, 0);
+
+    return function render(props: RenderProps, useCache = false) {
         const {gl, program, sun, size} = context;
         const {
             state,
             aspect,
             flip = false
-        } = opts;
+        } = props;
         const {projection, model, view} = createMatrices({
             camera: state.camera,
             aspect,
@@ -62,6 +101,10 @@ function createRender(context: Context) {
         bindBuffer(gl, sun.buffers.position, program.attributes.position, 3);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sun.buffers.indices);
 
+        gl.uniform1i(
+            program.uniforms.useCache,
+            Number(useCache)
+        );
         gl.uniform3fv(
             program.uniforms.sunPosition,
             state.sky.sunPosition
