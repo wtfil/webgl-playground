@@ -18,9 +18,11 @@ const float msc = 21e-6; // Mie scattering coefficient
 const float gr = 0.0; // Rayleigh simetry constant
 const float gm = 0.758; // Mie simetry constant
 
+
 varying vec4 worldPosition;
 varying vec4 sunView;
 
+const vec3 clearSkyColor = vec3(0.53, 0.8, 0.98);
 const int primaryRaySamples = 3;
 const int secondaryRaySamples = 2;
 
@@ -78,23 +80,10 @@ float dtse(
     return -1.0;
 }
 
-vec3 getSunColor(
-    vec3 sun,
-    vec3 position
-) {
-    float angle = acos(dot(
-        sun,
-        position
-    ));
-    return vec3(1.0) * (1.0 - smoothstep(0.0, 1.0, angle * 20.0));
-}
-
-void main() {
+vec3 getRayleighMieScattering(vec3 world, vec3 sun) {
     vec3 camera = vec3(0.0, 0.0, earthRadius);
-    vec3 world = normalize(worldPosition.xyz);
     vec3 position = translate(world) * atmosphereRadius;
     vec3 ray = normalize(position - camera);
-    vec3 sun = normalize(sunPosition);
 
     float far = dtse(camera, ray, atmosphereRadius);
 
@@ -110,20 +99,20 @@ void main() {
     vec3 mieAccumulated = vec3(0.0);
 
     for (int i = 0; i < primaryRaySamples; i ++) {
-        lowp float far2 = dtse(
+        float far2 = dtse(
             samplePoint,
             sun,
             atmosphereRadius
         );
-        lowp float sampleSize2 = far2 / float(secondaryRaySamples);
-        lowp vec3 samplePoint2 = samplePoint + sampleSize2 / 2.0 * sun;
-        lowp float rshOpticalDepth2 = 0.0;
-        lowp float mieOpticalDepth2 = 0.0;
+        float sampleSize2 = far2 / float(secondaryRaySamples);
+        vec3 samplePoint2 = samplePoint + sampleSize2 / 2.0 * sun;
+        float rshOpticalDepth2 = 0.0;
+        float mieOpticalDepth2 = 0.0;
 
         for (int j = 0; j < secondaryRaySamples; j ++) {
-            lowp float height = length(samplePoint2) - earthRadius;
-            lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize2;
-            lowp float mieOpticalDepthStep = exp(-height / msh) * sampleSize2;
+            float height = length(samplePoint2) - earthRadius;
+            float rshOpticalDepthStep = exp(-height / rsh) * sampleSize2;
+            float mieOpticalDepthStep = exp(-height / msh) * sampleSize2;
 
             rshOpticalDepth2 += rshOpticalDepthStep;
             mieOpticalDepth2 += mieOpticalDepthStep;
@@ -131,14 +120,14 @@ void main() {
             samplePoint2 += sun * sampleSize2;
         }
 
-        lowp float height = length(samplePoint) - earthRadius;
-        lowp float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
-        lowp float mieOpticalDepthStep = exp(-height / msh) * sampleSize;
+        float height = length(samplePoint) - earthRadius;
+        float rshOpticalDepthStep = exp(-height / rsh) * sampleSize;
+        float mieOpticalDepthStep = exp(-height / msh) * sampleSize;
 
         rshOpticalDepth += rshOpticalDepthStep;
         mieOpticalDepth += mieOpticalDepthStep;
 
-        lowp vec3 outScattering = exp(
+        vec3 outScattering = exp(
             -rsc * (rshOpticalDepth + rshOpticalDepth2)
             -msc * (mieOpticalDepth + mieOpticalDepth2)
         );
@@ -149,18 +138,72 @@ void main() {
         samplePoint += ray * sampleSize;
     }
 
-    lowp vec3 color = vec3(0.0);
-
-    // mieAccumulated *= 0.0;
-    // rshAccumulated *= 0.5;
-    lowp vec3 sunColor = getSunColor(sun, world);
-    lowp vec3 totalLight = si * (
+    vec3 totalLight = si * (
         rshFactor * rsc * rshAccumulated +
         mieFactor * msc * mieAccumulated
     );
-    // color += totalLight;
-    color += 1.0 - exp(-1.0 * totalLight);
+    return 1.0 - exp(-1.0 * totalLight);
+}
+
+// credits https://www.shadertoy.com/view/MsVSWt
+vec3 getSunColor(
+    vec3 position,
+    vec3 sun
+) {
+    float dis = 1.0 - distance(sun, position);
+    dis = clamp(dis, 0.0, 1.0);
+    float z = abs(sun.z * 2.0);
+    float z2 = pow(z, 1.5);
+    
+    float glow = dis;
+    
+    dis = pow(dis, 100.0);
+    dis *= 10.0;
+    dis = clamp(dis, 0.0, 1.0);
+    
+    glow = pow(glow, z * 12.0);
+    // glow = pow(glow, z);
+    glow = clamp(glow, 0.0, 1.0);
+    
+    dis *= pow(z2, 1.0 / 1.65);
+    glow *= pow(z2, 1.0 / 2.0);
+    
+    dis += glow;
+    
+    return vec3(1.0,0.6,0.05) * dis;
+    
+}
+
+
+// credits https://www.shadertoy.com/view/MsVSWt
+vec3 getFastScattering(vec3 position, vec3 sun) {
+    float atmosphere = sqrt(1.0 - position.z);
+    vec3 skyColor = vec3(0.2, 0.4, 0.8);
+    float scatter = pow(sun.z, 1.0 / 15.0);
+    scatter = 1.0 - clamp(scatter, 0.8, 1.0);
+    vec3 scatterColor = mix(
+        vec3(1.0),
+        vec3(1.0, 0.3, 0.0) * 1.5,
+        scatter * 2.0
+    );
+    skyColor = mix(
+        skyColor,
+        vec3(scatterColor),
+        atmosphere / 1.3
+    );
+    skyColor = mix(skyColor, vec3(0.0), clamp(-sun.z * 3.0, 0.0, 1.0));
+    return skyColor;
+}
+
+void main() {
+    vec3 world = normalize(worldPosition.xyz);
+    vec3 sun = normalize(sunPosition);
+    vec3 color = vec3(0.0);
+    vec3 sunColor = getSunColor(world, sun);
+    // vec3 sunColor = getSunColor(sun, world);
     color += sunColor;
+    color += getFastScattering(world, sun);
+    // color += getRayleighMieScattering(world, sun);
 
     gl_FragColor = vec4(color, 1.0);
 }

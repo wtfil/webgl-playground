@@ -24,7 +24,7 @@ const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const TERRAIN_SIZE = SIZE * 2;
 const WATER_SIZE = SIZE * 2;
-const SKY_DOME_SIZE = SIZE;
+const SKY_DOME_SIZE = SIZE * 10;
 const DETAILS_LEVEL = 4;
 
 async function setup() {
@@ -114,6 +114,7 @@ function drawScene(props: {
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);   
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     if (state.water.visible) {
@@ -123,8 +124,6 @@ function drawScene(props: {
                     ...opts,
                     flip: true
                 });
-            } else {
-                gl.clearColor(0.53, 0.8, 0.98, 1.); 
             }
             if (state.terrain.visible) {
                 terrain.render({
@@ -154,5 +153,14 @@ function drawScene(props: {
     }
     if (state.sky.visible) {
         sky.render(opts);
+    } else {
+        gl.clearColor(0.53, 0.8, 0.98, 1.);
     }
+}
+
+(window as any).scatter = (v: number, d:number = 15) => {
+    let s = Math.pow(v, 1 / d);
+    s = Math.min(s, 1.0);
+    s = Math.max(s, 0.7);
+    return 1 - s;
 }

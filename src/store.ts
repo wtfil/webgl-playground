@@ -1,5 +1,5 @@
 import Vec3 = require('gl-matrix/vec3');
-import {inRange} from './utils';
+import {inRange, toggleViaQS} from './utils';
 import {getSunPosition} from './create-sky';
 import {FieldsOfType} from './types';
 
@@ -7,11 +7,13 @@ const INITIAL_STATE = {
     app: {
         // currently no used
         active: true,
-        autoPilot: true
+        autoPilot: toggleViaQS('ap', true)
     },
     camera: {
-        center: Vec3.fromValues(0, 100, 140),
-        position: Vec3.fromValues(0, 0, 160)
+        // center: Vec3.fromValues(0, 100, 140),
+        // position: Vec3.fromValues(0, 0, 160)
+        center: Vec3.fromValues(354, -76, 21),
+        position: Vec3.fromValues(262, -32, 12),
     },
     terrain: {
         visible: true
@@ -20,8 +22,8 @@ const INITIAL_STATE = {
         start: Date.now(),
         time: 0,
         visible: true,
-        useReflection: true,
-        useRefraction: true
+        useReflection: toggleViaQS('rfl', true),
+        useRefraction: toggleViaQS('rfr', true)
     },
     light: {
         // directional light
@@ -29,10 +31,11 @@ const INITIAL_STATE = {
         color: Vec3.fromValues(0, 0, 0),
     },
     sky: {
-        dayTime: 9 * 3600 * 1000,
+        // dayTime: 9 * 3600 * 1000,
+        dayTime: 11500000,
         visible: true,
         sunPosition: Vec3.fromValues(0, 0, 0),
-        autoSunMove: false
+        autoSunMove: toggleViaQS('asm', false)
     }
 }
 

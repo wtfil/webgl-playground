@@ -52,6 +52,7 @@ function createRender(context: Context) {
             camera: state.camera,
             aspect,
             flip,
+            far: size * 1.1
         });
         const [x, y] = state.camera.position
         Mat4.translate(model, model, [x, y, 0]);
@@ -90,6 +91,7 @@ function createRender(context: Context) {
             model
         );
 
+        gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
         gl.disable(gl.BLEND);
