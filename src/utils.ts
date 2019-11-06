@@ -226,3 +226,8 @@ export function inRange(v: number, min: number, max: number): number {
     }
     return v;
 }
+
+
+export const toggleViaQS = (term: string, defaultValue: boolean) => {
+    return window.location.search.includes(term) ? !defaultValue: defaultValue;
+}
