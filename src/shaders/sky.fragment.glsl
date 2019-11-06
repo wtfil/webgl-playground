@@ -9,8 +9,8 @@ vec3 getSunColor(
     vec3 sun
 ) {
     float dis = 1.0 - distance(sun, position);
-    dis = clamp(dis, 0.0, 1.0);
-    float z = clamp(sun.z * 2.0, 0.0, 1.0);
+    dis = clamp(dis, 0.01, 1.0);
+    float z = clamp(sun.z, 0.0, 1.0);
     float z2 = pow(z, 1.5);
     
     float glow = dis;
@@ -20,7 +20,6 @@ vec3 getSunColor(
     dis = clamp(dis, 0.0, 1.0);
     
     glow = pow(glow, z * 12.0);
-    // glow = pow(glow, z);
     glow = clamp(glow, 0.0, 1.0);
     
     dis *= pow(z2, 1.0 / 1.65);
@@ -44,7 +43,7 @@ vec3 getFastScattering(vec3 position, vec3 sun) {
     );
     skyColor = mix(
         skyColor,
-        vec3(scatterColor),
+        scatterColor,
         atmosphere / 1.3
     );
     skyColor = mix(skyColor, vec3(0.0), clamp(-sun.z * 3.0, 0.0, 1.0));

@@ -16,7 +16,7 @@ uniform vec3 directionalLightColor;
 
 const float waterDistortionStrenth = 0.02;
 const float fresnelStrength = 1.0;
-const float waterReflectivity = 0.5;
+const float waterReflectivity = 0.1;
 const vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
 // const vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
 const float shineDamper = 20.0;

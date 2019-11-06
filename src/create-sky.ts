@@ -54,8 +54,8 @@ function createRender(context: Context) {
             flip,
             far: size * 1.1
         });
-        const [x, y] = state.camera.position
-        Mat4.translate(model, model, [x, y, 0]);
+        const [x, y, z] = state.camera.position
+        Mat4.translate(model, model, [x, y, flip ? -z : z]);
         Mat4.scale(model, model, [size, size, size]);
 
         gl.useProgram(program.program);
@@ -91,10 +91,10 @@ function createRender(context: Context) {
             model
         );
 
-        // gl.enable(gl.BLEND);
-        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
-        // gl.disable(gl.BLEND);
+        gl.disable(gl.BLEND);
     }
 }
 

@@ -7,13 +7,11 @@ const INITIAL_STATE = {
     app: {
         // currently no used
         active: true,
-        autoPilot: toggleViaQS('ap', true)
+        autoPilot: toggleViaQS('ap', false)
     },
     camera: {
-        // center: Vec3.fromValues(0, 100, 140),
-        // position: Vec3.fromValues(0, 0, 160)
-        center: Vec3.fromValues(354, -76, 21),
-        position: Vec3.fromValues(262, -32, 12),
+        center: Vec3.fromValues(270, 330, 87),
+        position: Vec3.fromValues(330, 414, 84)
     },
     terrain: {
         visible: true
@@ -31,8 +29,8 @@ const INITIAL_STATE = {
         color: Vec3.fromValues(0, 0, 0),
     },
     sky: {
-        // dayTime: 9 * 3600 * 1000,
-        dayTime: 11500000,
+        dayTime: 9 * 3600 * 1000,
+        // dayTime: 11500000,
         visible: true,
         sunPosition: Vec3.fromValues(0, 0, 0),
         autoSunMove: toggleViaQS('asm', false)
