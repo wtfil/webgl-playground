@@ -41,7 +41,7 @@ void main() {
     normal = normalize(normal);
     float refractiveFactor = dot(toCamera, normal);
     // TODO do we need this?
-    // refractiveFactor = pow(refractiveFactor, fresnelStrength);
+    refractiveFactor = pow(refractiveFactor, fresnelStrength);
 
     // puting all together
     refractTexCoords += totalDistortion;

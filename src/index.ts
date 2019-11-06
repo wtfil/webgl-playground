@@ -24,7 +24,7 @@ const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
 const TERRAIN_SIZE = SIZE * 2;
 const WATER_SIZE = SIZE * 2;
-const SKY_DOME_SIZE = SIZE * 10;
+const SKY_DOME_SIZE = SIZE * 2;
 const DETAILS_LEVEL = 4;
 
 async function setup() {
