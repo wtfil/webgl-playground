@@ -23,14 +23,14 @@ export async function createWater(
     const {size} = opts;
     const dudvTexture = await loadTexture(gl, 'textures/dudvmap.png');
     const normalMapTexture = await loadTexture(gl, 'textures/normalmap.png');
-    const [
-        refractionTexture,
-        refractionFramebuffer
-    ] = createFramebufferAndTexture(gl, size, size);
-    const [
-        reflectionTexture,
-        reflectionFramebuffer
-    ] = createFramebufferAndTexture(gl, size, size);
+    const {
+        colorTexture: refractionTexture,
+        framebuffer: refractionFramebuffer
+     } = createFramebufferAndTexture(gl, size, size);
+    const {
+        colorTexture: reflectionTexture,
+        framebuffer: reflectionFramebuffer
+    } = createFramebufferAndTexture(gl, size, size);
     const program = createProgram(
         gl,
         waterVertextShaderSource,

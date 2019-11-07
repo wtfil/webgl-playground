@@ -157,10 +157,3 @@ function drawScene(props: {
         gl.clearColor(0.53, 0.8, 0.98, 1.);
     }
 }
-
-(window as any).scatter = (v: number, d:number = 15) => {
-    let s = Math.pow(v, 1 / d);
-    s = Math.min(s, 1.0);
-    s = Math.max(s, 0.7);
-    return 1 - s;
-}
