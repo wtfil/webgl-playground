@@ -174,6 +174,10 @@ export function bindArraysToBuffers(
 
 
 export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
+    const ext = gl.getExtension('WEBGL_depth_texture');
+    if (!ext) {
+        console.warn('WEBGL_depth_texture is not supported')
+    }
     const colorTexture = gl.createTexture() as WebGLTexture;
     const depthTexture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
@@ -196,7 +200,7 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT,
         width, height, 0,
-        gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null
+        gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null
     );
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -219,13 +223,13 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
         colorTexture,
         0
     );
-    // gl.framebufferTexture2D(
-    //     gl.FRAMEBUFFER,
-    //     gl.DEPTH_ATTACHMENT,
-    //     gl.TEXTURE_2D,
-    //     depthTexture,
-    //     0
-    // );
+    gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.DEPTH_ATTACHMENT,
+        gl.TEXTURE_2D,
+        depthTexture,
+        0
+    );
     // gl.framebufferRenderbuffer(
     //     gl.FRAMEBUFFER,
     //     gl.DEPTH_ATTACHMENT,
@@ -234,7 +238,7 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
     // ); 
     
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return {colorTexture, framebuffer};
+    return {colorTexture, depthTexture, framebuffer};
 }
 
 

@@ -8,6 +8,7 @@ uniform sampler2D dudvTexture;
 uniform sampler2D normalMapTexture;
 uniform sampler2D refractionTexture;
 uniform sampler2D reflectionTexture;
+uniform sampler2D depthTexture;
 uniform float dudvOffset;
 uniform int useRefraction;
 uniform int useReflection;
@@ -18,8 +19,25 @@ const float waterDistortionStrenth = 0.02;
 const float fresnelStrength = 1.0;
 const float waterReflectivity = 0.1;
 const vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
-// const vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
+const vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
 const float shineDamper = 20.0;
+
+float getDepthAngle(
+  vec2 refractTexCoords
+) {
+    float near = 0.1;
+    float far = 50.0;
+    float nfp = far + near;
+    float nfm = far - near;
+
+    float cameraToFirstThingBehindWater = texture2D(depthTexture, refractTexCoords).r;
+    float cameraToFirstThingUnderWater = 2.0
+      * near * far
+      / (nfp - (2.0 * cameraToFirstThingBehindWater - 1.0) * nfm);
+    float cameraToWaterDepth = gl_FragCoord.z;
+    float cameraToWaterDistance = 2.0 * near * far / (nfp - (2.0 * cameraToWaterDepth - 1.0) * nfm);
+    return cameraToFirstThingUnderWater - cameraToWaterDistance;
+}
 
 void main() {
     // distortion
@@ -32,6 +50,7 @@ void main() {
     vec2 ndc = (clipSpace.xy / clipSpace.w) / 2.0 + 0.5;
     vec2 refractTexCoords = vec2(ndc.x, +ndc.y);
     vec2 reflectTexCoords = vec2(ndc.x, 1.0-ndc.y);
+    float angledWaterDepth = getDepthAngle(refractTexCoords);
 
 
     // refractive factor
@@ -59,6 +78,7 @@ void main() {
     // color
     vec4 refractColor = texture2D(refractionTexture, refractTexCoords);
     vec4 reflectColor = texture2D(reflectionTexture, reflectTexCoords);
+    refractColor = mix(refractColor, deepWaterColor, clamp(angledWaterDepth/10.0, 0.0, 1.0));
 
     if (useReflection == 1 && useRefraction == 1) {
       gl_FragColor = mix(reflectColor, refractColor, refractiveFactor);
