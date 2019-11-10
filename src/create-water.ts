@@ -27,7 +27,7 @@ export async function createWater(
         colorTexture: refractionTexture,
         depthTexture: depthTexture,
         framebuffer: refractionFramebuffer
-     } = createFramebufferAndTexture(gl, size, size);
+     } = createFramebufferAndTexture(gl, size, size, true);
     const {
         colorTexture: reflectionTexture,
         framebuffer: reflectionFramebuffer
