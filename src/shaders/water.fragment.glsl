@@ -17,10 +17,10 @@ uniform vec3 directionalLightColor;
 
 const float waterDistortionStrenth = 0.02;
 const float fresnelStrength = 1.0;
-const float waterReflectivity = 0.1;
+const float waterReflectivity = 0.4;
 const vec4 shallowWaterColor =  vec4(0.0, 0.1, 0.3, 1.0);
 const vec4 deepWaterColor = vec4(0.0, 0.1, 0.2, 1.0);
-const float shineDamper = 20.0;
+const float shineDamper = 50.0;
 
 float getDepthAngle(
   vec2 refractTexCoords
@@ -52,7 +52,6 @@ void main() {
     vec2 reflectTexCoords = vec2(ndc.x, 1.0-ndc.y);
     float angledWaterDepth = getDepthAngle(refractTexCoords);
 
-
     // refractive factor
     vec3 toCamera = normalize(fromFragmentToCamera);
     vec4 normalMapColor = texture2D(normalMapTexture, distortedTexCoords);
@@ -65,9 +64,8 @@ void main() {
     // puting all together
     refractTexCoords += totalDistortion;
     reflectTexCoords += totalDistortion;
-    // refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);
-    // reflectTexCoords.x = clamp(reflectTexCoords.x, 0.001, 0.999);
-    // reflectTexCoords.y = clamp(reflectTexCoords.y, 0.001, 0.999);
+    refractTexCoords = clamp(refractTexCoords, 0.001, 0.999);
+    reflectTexCoords = clamp(reflectTexCoords, 0.001, 0.999);
 
     // lighs
     vec3 reflectedLight = reflect(normalize(directionalLightVector), normal);
