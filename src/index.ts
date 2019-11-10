@@ -18,7 +18,7 @@ import {
 
 window.addEventListener('load', setup);
 
-const CANVAS_ELEM_SIZE = Math.min(window.innerWidth, window.innerHeight, 1024);
+const CANVAS_ELEM_SIZE = Math.min(window.innerWidth - 1, window.innerHeight - 1, 1024);
 const SIZE = 512;
 const CANVAS_WIDTH = SIZE
 const CANVAS_HEIGHT = SIZE;
