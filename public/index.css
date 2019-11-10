@@ -14,9 +14,14 @@ body {
     right: 0;
     top: 0;
     padding: 10px;
-    background: rgba(255, 0, 0, 0.1);
     position: absolute;
 }
+.tips a,
+.tips a:visited
+{
+    text-decoration: none;
+    color: #2a7ae2
+}
 .tips i {
-    background: white;
+    background: rgba(255, 0, 0, 0.1);
 }
