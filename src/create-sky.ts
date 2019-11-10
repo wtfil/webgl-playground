@@ -91,10 +91,7 @@ function createRender(context: Context) {
             model
         );
 
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, sun.size, gl.UNSIGNED_SHORT, 0);
-        gl.disable(gl.BLEND);
     }
 }
 

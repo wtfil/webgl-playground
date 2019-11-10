@@ -1,4 +1,4 @@
-precision lowp float;
+precision highp float;
 
 attribute vec4 position;
 attribute vec2 textureCoord;

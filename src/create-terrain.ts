@@ -93,10 +93,7 @@ function createRender(context: Context) {
         gl.uniform1f(program.uniforms.clipDirection, clipDirection);
         gl.uniform1f(program.uniforms.clipLevel, clipLevel);
 
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.drawElements(gl.TRIANGLES, terrain.size, gl.UNSIGNED_SHORT, 0);
-        gl.disable(gl.BLEND);
     }
 }
 
