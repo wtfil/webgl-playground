@@ -29,26 +29,18 @@ export async function loadTexture(gl: WebGLRenderingContext, url: string) {
     });
     const texture = gl.createTexture();
     const isPow2 = (n: number) => (n & (n - 1)) === 0;
-
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA,
-        1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-        new Uint8Array([0, 0, 255, 255])
-    );
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.RGBA,
         gl.RGBA, gl.UNSIGNED_BYTE, image
     );
 
-    if (isPow2(image.width) && isPow2(image.height)) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
+    if (!isPow2(image.width) || !isPow2(image.height)) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
 
     return texture as WebGLTexture;
@@ -173,13 +165,19 @@ export function bindArraysToBuffers(
 
 
 
-export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: number, height: number) {
-    const texture = gl.createTexture() as WebGLTexture;
+export function createFramebufferAndTexture(
+    gl: WebGLRenderingContext,
+    width: number,
+    height: number,
+    createDepthTexture = false
+) {
+    const colorTexture = gl.createTexture() as WebGLTexture;
+    const depthTexture = gl.createTexture() as WebGLTexture;
     const framebuffer = gl.createFramebuffer() as WebGLFramebuffer;
-    const renderbuffer = gl.createRenderbuffer() as WebGLRenderbuffer;
+    const depthRenderBuffer = gl.createRenderbuffer() as WebGLRenderbuffer;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, colorTexture);
     gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.RGBA,
         width, height, 0,
@@ -191,30 +189,54 @@ export function createFramebufferAndTexture(gl: WebGLRenderingContext, width: nu
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-    gl.renderbufferStorage(
-        gl.RENDERBUFFER,
-        gl.DEPTH_COMPONENT16,
-        width,
-        height
-    );
-
     gl.framebufferTexture2D(
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        texture,
+        colorTexture,
         0
     );
-    gl.framebufferRenderbuffer(
-        gl.FRAMEBUFFER,
-        gl.DEPTH_ATTACHMENT,
-        gl.RENDERBUFFER,
-        renderbuffer,
-    );
+
+    if (createDepthTexture) {
+        if (!gl.getExtension('WEBGL_depth_texture')) {
+            console.warn('WEBGL_depth_texture is not supported')
+        }
+        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+        gl.texImage2D(
+            gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT,
+            width, height, 0,
+            gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null
+        );
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        gl.framebufferTexture2D(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_ATTACHMENT,
+            gl.TEXTURE_2D,
+            depthTexture,
+            0
+        );
+    } else {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderBuffer);
+        gl.renderbufferStorage(
+            gl.RENDERBUFFER,
+            gl.DEPTH_COMPONENT16,
+            width, height
+        );
+        gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_ATTACHMENT,
+            gl.RENDERBUFFER,
+            depthRenderBuffer
+        ); 
+    }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return [texture, framebuffer];
+    return {colorTexture, depthTexture, framebuffer, depthRenderBuffer};
 }
 
 

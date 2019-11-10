@@ -23,14 +23,15 @@ export async function createWater(
     const {size} = opts;
     const dudvTexture = await loadTexture(gl, 'textures/dudvmap.png');
     const normalMapTexture = await loadTexture(gl, 'textures/normalmap.png');
-    const [
-        refractionTexture,
-        refractionFramebuffer
-    ] = createFramebufferAndTexture(gl, size, size);
-    const [
-        reflectionTexture,
-        reflectionFramebuffer
-    ] = createFramebufferAndTexture(gl, size, size);
+    const {
+        colorTexture: refractionTexture,
+        depthTexture: depthTexture,
+        framebuffer: refractionFramebuffer
+     } = createFramebufferAndTexture(gl, size, size, true);
+    const {
+        colorTexture: reflectionTexture,
+        framebuffer: reflectionFramebuffer
+    } = createFramebufferAndTexture(gl, size, size);
     const program = createProgram(
         gl,
         waterVertextShaderSource,
@@ -47,7 +48,8 @@ export async function createWater(
             dudv: dudvTexture,
             normalMap: normalMapTexture,
             refraction: refractionTexture,
-            reflection: reflectionTexture
+            reflection: reflectionTexture,
+            depth: depthTexture
         }
     })
 
@@ -108,6 +110,10 @@ function createRender(context: Context) {
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, water.textures.reflection);
     gl.uniform1i(program.uniforms.reflectionTexture, 3);
+
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, water.textures.depth);
+    gl.uniform1i(program.uniforms.depthTexture, 4);
 
     return function render(opts: {
         state: State,
