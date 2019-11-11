@@ -2,6 +2,7 @@ import {EventEmitter} from 'events';
 
 export function initControls(elem: HTMLElement) {
     let mousedown = false;
+    let prevTouch: Touch | null;
     const pressed = new Set();
     const ee = new EventEmitter();
     const pullKeys = () => {
@@ -102,11 +103,27 @@ export function initControls(elem: HTMLElement) {
         e.preventDefault();
     }
 
+    const onTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0]
+        if (prevTouch) {
+            ee.emit('rotateCamera', {
+                dx: touch.clientX - prevTouch.clientX,
+                dy: prevTouch.clientY - touch.clientY
+            });
+        }
+        prevTouch = touch;
+    }
+    const onTouchStart = (e: TouchEvent) => {
+        prevTouch = null;
+    }
+
     const tearDown = () => {
         ee.removeAllListeners();
         elem.removeEventListener('wheel', onWheel);
         elem.removeEventListener('mousedown', onMouseDown)
         elem.removeEventListener('contextmenu', onContextMenu)
+        elem.removeEventListener('touchmove', onTouchMove)
+        elem.removeEventListener('touchstart', onTouchStart)
         window.removeEventListener('mouseup', onMouseUp)
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('keypress', onKeyPress);
@@ -118,6 +135,8 @@ export function initControls(elem: HTMLElement) {
     elem.addEventListener('wheel', onWheel);
     elem.addEventListener('mousedown', onMouseDown)
     elem.addEventListener('contextmenu', onContextMenu)
+    elem.addEventListener('touchmove', onTouchMove)
+    elem.addEventListener('touchstart', onTouchStart)
     window.addEventListener('mouseup', onMouseUp)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('keypress', onKeyPress);

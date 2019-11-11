@@ -25,3 +25,23 @@ body {
 .tips i {
     background: rgba(255, 0, 0, 0.1);
 }
+.tips__mobile {
+    display: none;
+}
+
+@media (max-width: 512px) {  
+    .tips {
+        top: auto;
+        right: auto;
+        bottom: 0px;
+        left: 0px;
+    }
+}
+@media (hover: none) {
+    .tips__desktop {
+        display: none;
+    }
+    .tips__mobile {
+        display: block;
+    }
+}
