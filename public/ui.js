@@ -44,19 +44,18 @@ class ExpandableList extends HTMLElement {
             </div>
         `
         this.root = this.select('root');
-        this.bind('label', 'click', this.toggle);
+        this.select('label').addEventListener('click', this.toggle);
         this.update();
+    }
+    disconnectedCallback() {
+        this.select('label').removeEventListener('click', this.toggle);
     }
     select(name) {
         return this.shadow.querySelector(`[data-${name}]`);
     }
-    bind(name, event, cb) {
-        this.select(name).addEventListener(event, cb)
-    }
     toggle = () => {
         this.isExpanded = !this.isExpanded;
         this.update();
-        console.log('toggle');
     }
     update = () => {
         if (this.isExpanded) {
@@ -120,6 +119,12 @@ class Toggle extends HTMLElement {
         this.isChecked = this.getAttribute('checked');
         this.update();
     }
+    disconnectedCallback() {
+        this.root.removeEventListener('click', this.toggle);
+    }
+    attributeChangedCallback(name, prev, next) {
+        console.log({name, prev, next})
+    }
     update() {
         if (this.isChecked) {
             this.setAttribute('checked', 'checked');
@@ -131,6 +136,7 @@ class Toggle extends HTMLElement {
     }
     toggle = () => {
         this.isChecked = !this.isChecked;
+        this.dispatchEvent(new CustomEvent('toggle', {detail: this.isChecked}));
         this.update();
     }
 }

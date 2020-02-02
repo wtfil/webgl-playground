@@ -1,5 +1,36 @@
 import {EventEmitter} from 'events';
 
+const toggles = [
+    {
+        id: 'water',
+        action: 'toggleRenderWater'
+    },
+    {
+        id: 'terrain',
+        action: 'toggleRenderTerrain'
+    },
+    {
+        id: 'reflection',
+        action: 'toggleReflection'
+    },
+    {
+        id: 'refraction',
+        action: 'toggleRefraction'
+    },
+    {
+        id: 'sky',
+        action: 'toggleRenderSun'
+    },
+    {
+        id: 'autopilot',
+        action: 'toggleAutoPilot'
+    },
+    {
+        id: 'auto-sun',
+        action: 'toggleAutoSunMove'
+    },
+]
+
 export function initControls(elem: HTMLElement) {
     let mousedown = false;
     let prevTouch: Touch | null;
@@ -128,6 +159,7 @@ export function initControls(elem: HTMLElement) {
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('keypress', onKeyPress);
         window.removeEventListener('keyup', onKeyup);
+        // TODO removeEventListener from toggles
     }
 
     pullKeys();
@@ -141,6 +173,13 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('keypress', onKeyPress);
     window.addEventListener('keyup', onKeyup);
+    toggles.forEach(item => {
+        const toggle = document.querySelector(`[data-toggle-id=${item.id}]`);
+        if (!toggle) {
+            return;
+        }
+        toggle.addEventListener('toggle', () => ee.emit(item.action))
+    })
 
     return {
         emitter: ee,
