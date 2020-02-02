@@ -5,14 +5,9 @@ import {createSky} from './create-sky';
 import {Unpacked} from './types';
 import {
     getInitialState,
-    toggle,
-    zoom,
-    rotateCamera,
-    moveSun,
     autoMoveSun,
     updateWaterTime,
     State,
-    moveCamera,
     autoPilot
 } from './store';
 

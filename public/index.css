@@ -35,8 +35,3 @@ body {
         left: 0px;
     }
 }
-@media (hover: none) {
-    .tips__control {
-        display: none;
-    }
-}
