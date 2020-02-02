@@ -1,10 +1,61 @@
-import {EventEmitter} from 'events';
+import {State, moveSun, rotateCamera, moveCamera, zoom, toggle} from './store';
 
-export function initControls(elem: HTMLElement) {
+export function initControls(elem: HTMLElement, state: State) {
+    const toggles = [
+        {
+            id: 'terrain',
+            key: '1',
+            getValue: () => state.terrain.visible,
+            action: () => toggle(state, 'terrain', 'visible')
+        },
+        {
+            id: 'water',
+            key: '2',
+            getValue: () => state.water.visible,
+            action: () => toggle(state, 'water', 'visible')
+        },
+        {
+            id: 'refraction',
+            key: '3',
+            getValue: () => state.water.useRefraction,
+            action: () => toggle(state, 'water', 'useRefraction')
+        },
+        {
+            id: 'reflection',
+            key: '4',
+            getValue: () => state.water.useReflection,
+            action: () => toggle(state, 'water', 'useReflection')
+        },
+        {
+            id: 'sky',
+            key: '5',
+            getValue: () => state.sky.visible,
+            action: () => toggle(state, 'sky', 'visible')
+        },
+        {
+            id: 'auto-sun',
+            key: '6',
+            getValue: () => state.sky.autoSunMove,
+            action: () => toggle(state, 'sky', 'autoSunMove')
+        },
+        {
+            id: 'autopilot',
+            key: '7',
+            getValue: () => state.app.autoPilot,
+            action: () => toggle(state, 'app', 'autoPilot')
+        },
+    ]
+    const setToggleValue = (item: typeof toggles[0]) => {
+        const toggle = document.querySelector(`[data-toggle-id=${item.id}]`);
+        if (item.getValue()) {
+            toggle?.setAttribute('checked', 'checked');
+        } else {
+            toggle?.removeAttribute('checked');
+        }
+    }
     let mousedown = false;
     let prevTouch: Touch | null;
     const pressed = new Set();
-    const ee = new EventEmitter();
     const pullKeys = () => {
         let left = 0;
         let forward = 0;
@@ -35,49 +86,30 @@ export function initControls(elem: HTMLElement) {
             sunTime ++;
         }
         if (sunTime) {
-            ee.emit('moveSun', {sunTime});
+            moveSun(state, sunTime * 3e5);
         }
         if (left || forward || up) {
-            ee.emit('moveCamera', {left, forward, up});
+            moveCamera(state, {left, forward, up})
         }
 
         requestAnimationFrame(pullKeys);
     }
 
     const onKeyPress = (e: KeyboardEvent) => {
-        switch (e.key) {
-            case '1':
-                ee.emit('toggleRenderTerrain');
-                break;
-            case '2':
-                ee.emit('toggleRenderWater');
-                break;
-            case '3':
-                ee.emit('toggleRefraction');
-                break;
-            case '4':
-                ee.emit('toggleReflection');
-                break;
-            case '5':
-                ee.emit('toggleRenderSun');
-                break;
-            case '6':
-                ee.emit('toggleAutoSunMove');
-                break;
-            case '7':
-                ee.emit('toggleAutoPilot');
-                break;
-            default:
-                pressed.add(e.key);
+        for (const item of toggles) {
+            if (e.key === item.key) {
+                item.action();
+                setToggleValue(item);
+                return;
+            }
         }
+        pressed.add(e.key);
     }
 
     const onWheel = (e: WheelEvent) => {
         const {deltaY: dy} = e;
         if (dy) {
-            ee.emit('zoom', {
-                dy: dy / Math.abs(dy) * 10
-            });
+            zoom(state, dy / Math.abs(dy) * 10);
             e.preventDefault();
         }
     }
@@ -95,7 +127,7 @@ export function initControls(elem: HTMLElement) {
     const onMouseMove = (e: MouseEvent) => {
         const {movementX, movementY} = e;
         if (mousedown) {
-            ee.emit('rotateCamera', {dx: -movementX, dy: movementY})
+            rotateCamera(state, -movementX / 500, movementY)
         }
     }
 
@@ -106,10 +138,11 @@ export function initControls(elem: HTMLElement) {
     const onTouchMove = (e: TouchEvent) => {
         const touch = e.touches[0]
         if (prevTouch) {
-            ee.emit('rotateCamera', {
-                dx: touch.clientX - prevTouch.clientX,
-                dy: prevTouch.clientY - touch.clientY
-            });
+            rotateCamera(
+                state,
+                (touch.clientX - prevTouch.clientX) / 500,
+                prevTouch.clientY - touch.clientY
+            )
         }
         prevTouch = touch;
     }
@@ -118,7 +151,6 @@ export function initControls(elem: HTMLElement) {
     }
 
     const tearDown = () => {
-        ee.removeAllListeners();
         elem.removeEventListener('wheel', onWheel);
         elem.removeEventListener('mousedown', onMouseDown)
         elem.removeEventListener('contextmenu', onContextMenu)
@@ -128,6 +160,10 @@ export function initControls(elem: HTMLElement) {
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('keypress', onKeyPress);
         window.removeEventListener('keyup', onKeyup);
+        toggles.forEach(item => {
+            const toggle = document.querySelector(`[data-toggle-id=${item.id}]`);
+            toggle?.removeEventListener('toggle', item.action)
+        })
     }
 
     pullKeys();
@@ -141,9 +177,13 @@ export function initControls(elem: HTMLElement) {
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('keypress', onKeyPress);
     window.addEventListener('keyup', onKeyup);
+    toggles.forEach(item => {
+        setToggleValue(item)
+        const toggle = document.querySelector(`[data-toggle-id=${item.id}]`);
+        toggle?.addEventListener('toggle', item.action)
+    })
 
     return {
-        emitter: ee,
         tearDown
     }
 }

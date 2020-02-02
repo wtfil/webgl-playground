@@ -5,14 +5,9 @@ import {createSky} from './create-sky';
 import {Unpacked} from './types';
 import {
     getInitialState,
-    toggle,
-    zoom,
-    rotateCamera,
-    moveSun,
     autoMoveSun,
     updateWaterTime,
     State,
-    moveCamera,
     autoPilot
 } from './store';
 
@@ -55,21 +50,8 @@ async function setup() {
     });
 
     const state = getInitialState();
-    const {emitter} = initControls(canvas);
+    initControls(canvas, state);
 
-    emitter
-        .on('toggleRenderWater', () => toggle(state, 'water', 'visible'))
-        .on('toggleRenderTerrain', () => toggle(state, 'terrain', 'visible'))
-        .on('toggleRefraction', () => toggle(state, 'water', 'useRefraction'))
-        .on('toggleReflection', () => toggle(state, 'water', 'useReflection'))
-        .on('toggleRenderSun', () => toggle(state, 'sky', 'visible'))
-        .on('toggleAutoSunMove', () => toggle(state, 'sky', 'autoSunMove'))
-        .on('toggleAutoPilot', () => toggle(state, 'app', 'autoPilot'))
-        .on('zoom', e => zoom(state, e.dy))
-        .on('moveCamera', e => moveCamera(state, e))
-        .on('rotateCamera', e => rotateCamera(state, e.dx / 500, e.dy))
-        .on('moveSun', e => moveSun(state, e.sunTime * 1e5))
-    
     function render() {
         if (!state.app.active) {
             return requestAnimationFrame(render);
@@ -86,7 +68,7 @@ async function setup() {
         });
         requestAnimationFrame(render);
     }
-    
+
     render();
 }
 
@@ -113,7 +95,7 @@ function drawScene(props: {
 
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);   
+    gl.depthFunc(gl.LEQUAL);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
