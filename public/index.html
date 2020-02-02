@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>WebGL playground</title>
     <link rel="stylesheet" href="index.css">
+    <script src="ui.js"></script>
 </head>
 <body>
     <div class="app">
@@ -13,22 +14,31 @@
     </div>
     <div class="tips">
         <a href="https://github.com/wtfil/webgl-playground">Github</a>
-        <br>
-        <br>
-        <span>Controls</span>
-        <br>
-        <div class="tips__desktop">
-            <span><i>a/s/w/d/q/e/mouse</i> move camera</span>
-            <br>
-            <span><i>j/k/6</i> move sun</span>
-            <br>
-            <span><i>3</i> toggle water refraction</span>
-            <br>
-            <span><i>4</i> toggle water reflection</span>
-        </div>
-        <div class="tips__mobile">
-            <span><i>touch</i> move camera</span>
-        </div>
+
+        <x-list label="demo options" expanded="expanded">
+            <x-list label="water" expanded="expanded">
+                <x-toggle checked="checked">on</x-toggle>
+                <x-toggle checked="checked">reflection</x-toggle>
+                <x-toggle checked="checked">refraction</x-toggle>
+            </x-list>
+            <x-list label="terrain" expanded="expanded">
+                <x-toggle checked="checked">on</x-toggle>
+            </x-list>
+            <x-list label="sky" expanded="expanded">
+                <x-toggle checked="checked">on</x-toggle>
+                <x-toggle>auto move sun</x-toggle>
+            </x-list>
+        </x-list>
+
+
+        <x-list label="controls">
+            <div><i>a/s/w/d/q/e/mouse</i> move camera</div>
+            <div><i>j/k</i> move sun</div>
+            <div><i>6</i> toggle automove for sun</div>
+            <div><i>3</i> toggle water refraction</div>
+            <div><i>4</i> toggle water reflection</div>
+        </x-list>
+
     </div>
 </body>
 </html>

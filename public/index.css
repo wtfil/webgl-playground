@@ -25,11 +25,9 @@ body {
 .tips i {
     background: rgba(255, 0, 0, 0.1);
 }
-.tips__mobile {
-    display: none;
-}
 
-@media (max-width: 512px) {  
+
+@media (max-width: 512px) {
     .tips {
         top: auto;
         right: auto;
@@ -38,10 +36,7 @@ body {
     }
 }
 @media (hover: none) {
-    .tips__desktop {
+    .tips__control {
         display: none;
-    }
-    .tips__mobile {
-        display: block;
     }
 }
