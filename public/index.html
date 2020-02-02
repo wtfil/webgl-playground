@@ -15,32 +15,27 @@
     <div class="tips">
         <a href="https://github.com/wtfil/webgl-playground">Github</a>
 
-        <x-list label="help" expanded="expanded">
-            <x-list label="demo options" expanded="expanded">
-                <x-list label="water" expanded="expanded">
-                    <x-toggle data-toggle-id="water" checked="checked">on</x-toggle>
-                    <x-toggle data-toggle-id="reflection" checked="checked">reflection</x-toggle>
-                    <x-toggle data-toggle-id="refraction" checked="checked">refraction</x-toggle>
-                </x-list>
-                <x-list label="terrain" expanded="expanded">
-                    <x-toggle data-toggle-id="terrain" checked="checked">on</x-toggle>
-                </x-list>
-                <x-list label="sky" expanded="expanded">
-                    <x-toggle data-toggle-id="sky" checked="checked">on</x-toggle>
-                    <x-toggle data-toggle-id="auto-sun">auto move sun</x-toggle>
-                </x-list>
-                <x-list label="camera" expanded="expanded">
-                    <x-toggle data-toggle-id="autopilot" checked="checked">auto move</x-toggle>
-                </x-list>
+        <x-list label="demo options" expanded="expanded">
+            <x-list label="terrain" expanded="expanded">
+                <x-toggle data-toggle-id="terrain">on</x-toggle>
             </x-list>
-            <x-list label="controls">
-                <div><i>a/s/w/d/q/e/mouse</i> move camera</div>
-                <div><i>j/k</i> move sun</div>
-                <div><i>6</i> toggle automove for sun</div>
-                <div><i>3</i> toggle water refraction</div>
-                <div><i>4</i> toggle water reflection</div>
+            <x-list label="water" expanded="expanded">
+                <x-toggle data-toggle-id="water">on</x-toggle>
+                <x-toggle data-toggle-id="refraction">refraction</x-toggle>
+                <x-toggle data-toggle-id="reflection">reflection</x-toggle>
             </x-list>
-        </x-list >
+            <x-list label="sky" expanded="expanded">
+                <x-toggle data-toggle-id="sky">on</x-toggle>
+                <x-toggle data-toggle-id="auto-sun">auto move sun</x-toggle>
+            </x-list>
+            <x-list label="camera" expanded="expanded">
+                <x-toggle data-toggle-id="autopilot">auto move</x-toggle>
+            </x-list>
+        </x-list>
+        <x-list label="keyboard / mouse">
+            <div><i>a/s/w/d/q/e/mouse</i> move camera</div>
+            <div><i>j/k</i> move sun</div>
+        </x-list>
 
 
     </div>

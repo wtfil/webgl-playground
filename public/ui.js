@@ -70,6 +70,7 @@ class ExpandableList extends HTMLElement {
 customElements.define('x-list', ExpandableList);
 
 class Toggle extends HTMLElement {
+    static get observedAttributes() { return ['checked']; }
     connectedCallback() {
         this.shadow = this.attachShadow({mode: 'open'});
         this.shadow.innerHTML = `
@@ -123,7 +124,13 @@ class Toggle extends HTMLElement {
         this.root.removeEventListener('click', this.toggle);
     }
     attributeChangedCallback(name, prev, next) {
-        console.log({name, prev, next})
+        if (name === 'checked') {
+            const isChecked = Boolean(next);
+            if (this.isChecked !== isChecked) {
+                this.isChecked = isChecked;
+                this.update();
+            }
+        }
     }
     update() {
         if (this.isChecked) {
